@@ -1,0 +1,5 @@
+# Folders to ignore
+/elm-stuff
+
+# MacOS weird stuff
+.DS_Store
