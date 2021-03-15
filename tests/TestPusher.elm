@@ -2,64 +2,43 @@ module TestPusher exposing (suite)
 
 import Expect
 import Json.Decode as D
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode as E
-import Pusher exposing (Error(..), withErrorHandler)
-import Test exposing (Test, describe, test, todo)
+import Pusher exposing (Member, decodeMember)
+import Test exposing (Test, describe, test)
 
 
-type TestMsg
-    = GotError Pusher.Error
-    | GotData String
+type alias InfoType =
+    { name : String }
 
 
-errorType : TestMsg -> String
-errorType msg =
-    case msg of
-        GotData _ ->
-            "no error"
-
-        GotError error ->
-            case error of
-                JsonError _ ->
-                    "JsonError"
-
-                Other ->
-                    "Other"
+jane : Member InfoType
+jane =
+    { id = "xyz.abc", info = { name = "Jane" } }
 
 
-type Data
-    = Data String
+encodeMember : Member InfoType -> Member D.Value
+encodeMember member =
+    { id = member.id, info = E.object [ ( "name", E.string member.info.name ) ] }
+
+
+infoDecoder : D.Decoder InfoType
+infoDecoder =
+    D.succeed InfoType |> required "name" D.string
 
 
 suite : Test
 suite =
     let
-        errorHandler : Pusher.Error -> TestMsg
-        errorHandler error =
-            GotError error
+        badInfo =
+            { id = "xzy.abc", info = E.int 2 }
 
-        makeHandler : D.Decoder data -> (data -> TestMsg) -> (D.Value -> TestMsg)
-        makeHandler =
-            Pusher.withErrorHandler errorHandler
-
-        stringHandler datum =
-            GotData datum
-
-        wantString =
-            makeHandler D.string stringHandler
+        encodedJane =
+            encodeMember jane
     in
     describe "Pusher tests"
-        [ test "errorHandler is called for JSON errors" <|
-            \_ -> errorType (wantString (E.int 1)) |> Expect.equal "JsonError"
-        , test "stringHandler is called for correct JSON" <|
-            \_ -> errorType (wantString (E.string "foo")) |> Expect.equal "no error"
-        , test "stringHandler returns the given data" <|
-            \_ -> wantString (E.string "foo") |> Expect.equal (GotData "foo")
+        [ test "decodeMember returns an error when info can't be parsed" <|
+            \_ -> decodeMember infoDecoder badInfo |> Expect.err
+        , test "decodeMember returns a Result with the encoded info when .info is an encoded InfoType" <|
+            \_ -> decodeMember infoDecoder encodedJane |> Expect.equal (Ok jane)
         ]
-
-
-
-{-
-   test "Error handler is called for JSON errors" <|
-     \_ -> Expect.true "Expected a Pusher.JsonError" (isPusherJsonError (handler badData))
--}
