@@ -4,7 +4,7 @@ import Expect
 import Json.Decode as D
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as E
-import Pusher exposing (Member, MemberList, decodeMember, decodeMemberList)
+import Pusher exposing (Member, MemberList, memberDecoder, memberListDecoder)
 import Test exposing (Test, describe, test)
 
 
@@ -17,9 +17,12 @@ infoDecoder =
     D.succeed InfoType |> required "name" D.string
 
 
-encodeMember : Member InfoType -> Member D.Value
+encodeMember : Member InfoType -> D.Value
 encodeMember member =
-    { id = member.id, info = E.object [ ( "name", E.string member.info.name ) ] }
+    E.object
+        [ ( "id", E.string member.id )
+        , ( "info", E.object [ ( "name", E.string member.info.name ) ] )
+        ]
 
 
 jane : Member InfoType
@@ -27,12 +30,12 @@ jane =
     { id = "xyz.abc", info = { name = "Jane" } }
 
 
-encodedJane =
-    encodeMember jane
-
-
-memberWithBadInfo =
-    { id = "abc.xyz", info = E.int 2 }
+badMember : D.Value
+badMember =
+    E.object
+        [ ( "id", E.string "abc" )
+        , ( "info", E.int 42 )
+        ]
 
 
 memberList : MemberList InfoType
@@ -41,47 +44,43 @@ memberList =
     , members =
         [ { id = "1", info = { name = "One" } }
         , jane
-        , { id = "42", info = { name = "Life, the universe, and everything" } }
+        , { id = "2", info = { name = "Two" } }
         , { id = "3", info = { name = "Three" } }
         ]
     }
 
 
-encodedMemberList : MemberList D.Value
 encodedMemberList =
-    { me = encodedJane
-    , members = List.map encodeMember memberList.members
-    }
+    E.object
+        [ ( "me", encodeMember memberList.me )
+        , ( "members", E.list encodeMember memberList.members )
+        ]
 
 
-badMeInMemberList : MemberList D.Value
-badMeInMemberList =
-    { encodedMemberList | me = memberWithBadInfo }
+badMemberList =
+    E.object
+        [ ( "me", badMember )
+        , ( "members", E.list encodeMember memberList.members )
+        ]
 
 
-badListMemberInMemberList : MemberList D.Value
-badListMemberInMemberList =
-    let
-        m =
-            encodedMemberList.members
+decodeMember =
+    D.decodeValue (memberDecoder infoDecoder)
 
-        oneBad =
-            List.concat [ List.take 2 m, [ memberWithBadInfo ], List.drop 2 m ]
-    in
-    { encodedMemberList | members = oneBad }
+
+decodeMemberList =
+    D.decodeValue (memberListDecoder infoDecoder)
 
 
 suite : Test
 suite =
     describe "Pusher tests"
-        [ test "decodeMember returns an error when info can't be parsed" <|
-            \_ -> decodeMember infoDecoder memberWithBadInfo |> Expect.err
-        , test "decodeMember returns Ok with the decoded info when .info is an encoded InfoType" <|
-            \_ -> decodeMember infoDecoder encodedJane |> Expect.equal (Ok jane)
+        [ test "decodeMember returns an error when its argument can't be parsed" <|
+            \_ -> decodeMember badMember |> Expect.err
+        , test "decodeMember returns Ok when the argument is a Member" <|
+            \_ -> decodeMember (encodeMember jane) |> Expect.equal (Ok jane)
         , test "decodeMemberList returns Ok with all .info fields decoded when they are encoded correctly" <|
-            \_ -> decodeMemberList infoDecoder encodedMemberList |> Expect.equal (Ok memberList)
+            \_ -> decodeMemberList encodedMemberList |> Expect.equal (Ok memberList)
         , test "decodeMemberList returns an error when the `me` field can't be parsed" <|
-            \_ -> decodeMemberList infoDecoder badMeInMemberList |> Expect.err
-        , test "decodeMemberList returns an error when a `members` element can't be parsed" <|
-            \_ -> decodeMemberList infoDecoder badListMemberInMemberList |> Expect.err
+            \_ -> decodeMemberList badMemberList |> Expect.err
         ]
