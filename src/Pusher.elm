@@ -1,7 +1,7 @@
 module Pusher exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
-    , withMe, withMembers, eventIsMemberAdded, eventIsMemberRemoved
+    , withMe, withMembers, isAdded, isRemoved
     , tagMap, tagMap2, tagMap4
     )
 
@@ -45,7 +45,7 @@ The `channel` and `event` fields are strings, so you could use them, for instanc
 
 When you successfully subscribe to a Pusher Presence channel, you can ask for a list of current channel members, and updates when a member is added or removed.
 
-@docs withMe, withMembers, eventIsMemberAdded, eventIsMemberRemoved
+@docs withMe, withMembers, isAdded, isRemoved
 
 
 # Tag Maps
@@ -144,7 +144,7 @@ The `me` field's value has a `uid` and a `data` field, as do each of the values 
 
 The message has `channel` and `event` fields as usual. The `event` field is always "pusher:subscription\_succeeded", but there is no need to test for that with `eventIs`, since no other event will have a `me` or `members` field.
 
-Here's how you might build a decoder for a `pusher:subscription_succeeded` event:
+Here's how you might build a decoder for a `pusher:subscription_succeeded` event. Since for this particular application, the `data` field only has a single subfield, `name`, we reach into `data` to pull the name out.
 
     type alias Member =
         { uid : String
@@ -173,22 +173,27 @@ withMembers : (String -> data -> member) -> Decoder data -> Decoder (List member
 withMembers constructor data =
     let
         decodeMember =
-            Decode.map2 constructor withUid data
+            withMember constructor data
     in
     Decode.field "members" (Decode.list decodeMember)
 
 
-{-| `eventIsMemberAdded` is equivalent to `eventIs "pusher:member_added"`
+withMember : (String -> data -> member) -> Decoder data -> Decoder member
+withMember constructor data =
+    Decode.map2 constructor withUid data
+
+
+{-| `isAdded` is equivalent to `eventIs "pusher:member_added"`
 -}
-eventIsMemberAdded : Decoder a -> Decoder a
-eventIsMemberAdded =
+isAdded : Decoder a -> Decoder a
+isAdded =
     eventIs "pusher:member_added"
 
 
-{-| `eventIsMemberRemoved` is equivalent to `eventIs "pusher:member_added"`
+{-| `isRemoved` is equivalent to `eventIs "pusher:member_removed"`
 -}
-eventIsMemberRemoved : Decoder a -> Decoder a
-eventIsMemberRemoved =
+isRemoved : Decoder a -> Decoder a
+isRemoved =
     eventIs "pusher:member_removed"
 
 

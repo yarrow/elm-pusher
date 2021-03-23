@@ -191,21 +191,21 @@ suite =
                             D.map WithName getMember
                     in
                     D.decodeValue decoder encoded |> isOk (WithName expectedMember)
-            , test "eventIsMemberAdded" <|
+            , test "isAdded" <|
                 \_ ->
                     let
                         decoder =
-                            D.map MemberAdded getMember |> eventIsMemberAdded
+                            D.map MemberAdded getMember |> isAdded
 
                         memberAdded =
                             encode { expected | event = "pusher:member_added" }
                     in
                     D.decodeValue decoder memberAdded |> isOk (MemberAdded expectedMember)
-            , test "eventIsMemberRemoved" <|
+            , test "isRemoved" <|
                 \_ ->
                     let
                         decoder =
-                            D.map MemberRemoved getMember |> eventIsMemberRemoved
+                            D.map MemberRemoved getMember |> isRemoved
 
                         memberRemoved =
                             encode { expected | event = "pusher:member_removed" }
