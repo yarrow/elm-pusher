@@ -8,27 +8,6 @@ import Pusher exposing (..)
 import Test exposing (Test, describe, test)
 
 
-type alias Data =
-    { name : String }
-
-
-dataEncoder d =
-    E.object [ ( "name", E.string d.name ) ]
-
-
-dataDecoder =
-    D.succeed Data |> required "name" D.string
-
-
-example encoder r =
-    E.object
-        [ ( "channel", E.string r.channel )
-        , ( "event", E.string r.event )
-        , ( "uid", E.string r.uid )
-        , ( "data", encoder r.data )
-        ]
-
-
 type alias UidData =
     { uid : String
     , data : Data
@@ -52,9 +31,30 @@ expected =
     }
 
 
+type alias Data =
+    { name : String }
+
+
+dataEncoder d =
+    E.object [ ( "name", E.string d.name ) ]
+
+
+dataDecoder =
+    D.succeed Data |> required "name" D.string
+
+
+encode r =
+    E.object
+        [ ( "channel", E.string r.channel )
+        , ( "event", E.string r.event )
+        , ( "uid", E.string r.uid )
+        , ( "data", dataEncoder r.data )
+        ]
+
+
 encoded : D.Value
 encoded =
-    example dataEncoder expected
+    encode expected
 
 
 uidData : UidData
@@ -62,12 +62,18 @@ uidData =
     { uid = expected.uid, data = expected.data }
 
 
-type alias UidName =
+type alias Member =
     { uid : String, name : String }
 
 
-uidName : UidName
-uidName =
+type alias MemberData =
+    { me : Member
+    , members : List Member
+    }
+
+
+expectedMember : Member
+expectedMember =
     { uid = expected.uid, name = expected.data.name }
 
 
@@ -75,12 +81,15 @@ type Msg
     = Full (ChannelEventUidData Data)
     | Some UidData
     | WTF String
-    | WithName UidName
+    | WithName Member
+    | MemberAdded Member
+    | MemberRemoved Member
+    | SubscribedMembers MemberData
 
 
 suite : Test
 suite =
-    describe "Pusher tests"
+    describe "Pusher tests" <|
         [ test "withEvent returns the value of the `event` field" <|
             \_ ->
                 D.decodeValue withEvent encoded |> Expect.equal (Ok expected.event)
@@ -161,7 +170,77 @@ suite =
             \_ ->
                 let
                     decoder =
-                        tagMap2 WithName UidName withUid (inData "name" D.string)
+                        tagMap2 WithName Member withUid (inData "name" D.string)
                 in
-                D.decodeValue decoder encoded |> Expect.equal (Ok (WithName uidName))
+                D.decodeValue decoder encoded |> Expect.equal (Ok (WithName expectedMember))
+        , describe "Member operations" <|
+            let
+                memberName =
+                    inData "name" D.string
+
+                getMember =
+                    D.map2 Member withUid memberName
+
+                isOk msg =
+                    Expect.equal (Ok msg)
+            in
+            [ test "Ensure getMember works as expected" <|
+                \_ ->
+                    let
+                        decoder =
+                            D.map WithName getMember
+                    in
+                    D.decodeValue decoder encoded |> isOk (WithName expectedMember)
+            , test "eventIsMemberAdded" <|
+                \_ ->
+                    let
+                        decoder =
+                            D.map MemberAdded getMember |> eventIsMemberAdded
+
+                        memberAdded =
+                            encode { expected | event = "pusher:member_added" }
+                    in
+                    D.decodeValue decoder memberAdded |> isOk (MemberAdded expectedMember)
+            , test "eventIsMemberRemoved" <|
+                \_ ->
+                    let
+                        decoder =
+                            D.map MemberRemoved getMember |> eventIsMemberRemoved
+
+                        memberRemoved =
+                            encode { expected | event = "pusher:member_removed" }
+                    in
+                    D.decodeValue decoder memberRemoved |> isOk (MemberRemoved expectedMember)
+            , test "withMe{,embers}" <|
+                \_ ->
+                    let
+                        decoder =
+                            tagMap2 SubscribedMembers
+                                MemberData
+                                (withMe Member memberName)
+                                (withMembers Member memberName)
+
+                        theMembers =
+                            { me = expectedMember
+                            , members =
+                                [ { uid = "1", name = "pat" }
+                                , expectedMember
+                                , { uid = "3", name = "robin" }
+                                ]
+                            }
+
+                        encodeMember m =
+                            E.object
+                                [ ( "uid", E.string m.uid )
+                                , ( "data", E.object [ ( "name", E.string m.name ) ] )
+                                ]
+
+                        encodedMembers =
+                            E.object
+                                [ ( "me", encodeMember theMembers.me )
+                                , ( "members", E.list encodeMember theMembers.members )
+                                ]
+                    in
+                    D.decodeValue decoder encodedMembers |> isOk (SubscribedMembers theMembers)
+            ]
         ]
