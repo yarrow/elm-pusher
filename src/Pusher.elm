@@ -1,6 +1,5 @@
 module Pusher exposing
-    ( withChannel, withEvent, withUid, withData
-    , hasChannel, hasEvent, hasUid, hasData, inData
+    ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap4
     )
@@ -19,12 +18,7 @@ When a Pusher event arrives in the browser, your Elm app will see a `Value` (`Js
 
 This section contains decoders for the above, in the styple of NoRedInk's `Json.Decode.Pipeline`.
 
-@docs withChannel, withEvent, withUid, withData
-
-
-# Fnord
-
-@docs hasChannel, hasEvent, hasUid, hasData, inData
+@docs withChannel, withEvent, withUid, withData, inData
 
 
 # Filters
@@ -39,7 +33,6 @@ This section contains decoders for the above, in the styple of NoRedInk's `Json.
 -}
 
 import Json.Decode as Decode exposing (Decoder, Error(..))
-import Json.Decode.Pipeline exposing (required, requiredAt)
 
 
 {-| Abbreviation for `Decode.field "channel" Decode.string`
@@ -66,67 +59,39 @@ withUid =
 {-| `withData decoder` is an abbreviation for `Decode.field "data" decoder`
 -}
 withData : Decoder data -> Decoder data
-withData decoder =
-    Decode.field "data" decoder
-
-
-{-| Abbreviation for `required "channel" Decode.string`
--}
-hasChannel : Decoder (String -> a) -> Decoder a
-hasChannel =
-    required "channel" Decode.string
-
-
-{-| Abbreviation for `required "event" Decode.string`
--}
-hasEvent : Decoder (String -> a) -> Decoder a
-hasEvent =
-    required "event" Decode.string
-
-
-{-| Abbreviation for `required "channel" Decode.string`
--}
-hasUid : Decoder (String -> a) -> Decoder a
-hasUid =
-    required "uid" Decode.string
-
-
-{-| `hasData decoder` is equivalent to `required "data" decoder`
--}
-hasData : Decoder a -> Decoder (a -> b) -> Decoder b
-hasData =
-    required "data"
+withData =
+    Decode.field "data"
 
 
 {-| Sometimes it's more convenient to reach into the `data` field and pull out subfields. (If `data` has only one field, for instance.)
 
-`inData "name" decoder`, for instance, is equivalent to `requiredAt [ "data", "name"] decoder`
+`inData "name" decoder`, for instance, is equivalent to `Decode.at [ "data", "name"] decoder`
 
 -}
-inData : String -> Decoder a -> Decoder (a -> b) -> Decoder b
+inData : String -> Decoder a -> Decoder a
 inData subfield =
-    requiredAt [ "data", subfield ]
+    Decode.at [ "data", subfield ]
 
 
 {-| `channelIs "ABC"` fails unless the incoming channel is "ABC"
 -}
 channelIs : String -> Decoder a -> Decoder a
-channelIs channel decoder =
-    is "channel" channel decoder
+channelIs channel =
+    is "channel" channel
 
 
 {-| `eventIs "Halloween"` fails unless the incoming event is "Halloween"
 -}
 eventIs : String -> Decoder a -> Decoder a
-eventIs event decoder =
-    is "event" event decoder
+eventIs event =
+    is "event" event
 
 
 {-| `uidIs "my.crush"` fails unless the incoming uid is "my.crush"
 -}
 uidIs : String -> Decoder a -> Decoder a
-uidIs uid decoder =
-    is "uid" uid decoder
+uidIs uid =
+    is "uid" uid
 
 
 is : String -> String -> Decoder a -> Decoder a

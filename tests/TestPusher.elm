@@ -62,10 +62,20 @@ uidData =
     { uid = expected.uid, data = expected.data }
 
 
+type alias UidName =
+    { uid : String, name : String }
+
+
+uidName : UidName
+uidName =
+    { uid = expected.uid, name = expected.data.name }
+
+
 type Msg
     = Full (ChannelEventUidData Data)
     | Some UidData
     | WTF String
+    | WithName UidName
 
 
 suite : Test
@@ -147,4 +157,11 @@ suite =
                             ]
                 in
                 D.decodeValue decoder encoded |> Expect.equal (Ok (Some uidData))
+        , test "The inData decoder reaches into the incoming data field" <|
+            \_ ->
+                let
+                    decoder =
+                        tagMap2 WithName UidName withUid (inData "name" D.string)
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok (WithName uidName))
         ]
