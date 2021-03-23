@@ -6,22 +6,36 @@ module Pusher exposing
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
 
+This package provides three things:
+
+  - a convention (implemented by the NPM package **INSERT NPM INFO HERE!!**) for communication between Elm and Pusher.js
+  - A thin wrapper around `Json.Decode` to simplify decoding Pusher messages
+  - An opionated decoder for Pusher errors
+
 
 # Basic Decoders
 
-When a Pusher event arrives in the browser, your Elm app will see a `Value` (`Json.Decode.Value`) with these fields:
+When a Pusher message arrives in the browser, your Elm app will see a `Json.Decode.Value` with these fields:
 
   - `channel` — the Pusher channel that sent the event,
   - `event` — the name of the event,
   - `uid` — the server-generated unique ID for your app's user, and
   - `data` — JSON data (in a format that you, or the server, have decided)
 
-This section contains decoders for the above, in the styple of NoRedInk's `Json.Decode.Pipeline`.
+The `event` field is always present, and the data field is always present with one exception. (See **SUBSCRIPTION SUCCEEDED**) Depending on the type of channels you use and what you've asked Pusher to give you, `channel` and `uid` may be missing.
 
 @docs withChannel, withEvent, withUid, withData, inData
 
 
 # Filters
+
+The `channel` and `event` fields are strings, so you could use them, for instance, as keys for in a `Dict`. But if you have only a few `event` values, for instance, you might prefer to use a custom type rather than strings to distinguish them. For instance:
+
+        Decode.oneOf
+            [ Decode.map Dog (withData dogHouse) |> eventIs "Dog"
+            , Decode.map Cat (withData catTree) |> eventIs "Cat"
+            , Decode.map Spider (withData web) |> eventIs "Spider"
+            ]
 
 @docs channelIs, eventIs, uidIs
 
