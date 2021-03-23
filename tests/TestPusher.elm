@@ -4,83 +4,147 @@ import Expect
 import Json.Decode as D
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as E
-import Pusher exposing (Member, MemberList, memberDecoder, memberListDecoder)
+import Pusher exposing (..)
 import Test exposing (Test, describe, test)
 
 
-type alias InfoType =
+type alias Data =
     { name : String }
 
 
-infoDecoder : D.Decoder InfoType
-infoDecoder =
-    D.succeed InfoType |> required "name" D.string
+dataEncoder d =
+    E.object [ ( "name", E.string d.name ) ]
 
 
-encodeMember : Member InfoType -> D.Value
-encodeMember member =
+dataDecoder =
+    D.succeed Data |> required "name" D.string
+
+
+example encoder r =
     E.object
-        [ ( "id", E.string member.id )
-        , ( "info", E.object [ ( "name", E.string member.info.name ) ] )
+        [ ( "channel", E.string r.channel )
+        , ( "event", E.string r.event )
+        , ( "uid", E.string r.uid )
+        , ( "data", encoder r.data )
         ]
 
 
-jane : Member InfoType
-jane =
-    { id = "xyz.abc", info = { name = "Jane" } }
-
-
-badMember : D.Value
-badMember =
-    E.object
-        [ ( "id", E.string "abc" )
-        , ( "info", E.int 42 )
-        ]
-
-
-memberList : MemberList InfoType
-memberList =
-    { me = jane
-    , members =
-        [ { id = "1", info = { name = "One" } }
-        , jane
-        , { id = "2", info = { name = "Two" } }
-        , { id = "3", info = { name = "Three" } }
-        ]
+type alias UidData =
+    { uid : String
+    , data : Data
     }
 
 
-encodedMemberList =
-    E.object
-        [ ( "me", encodeMember memberList.me )
-        , ( "members", E.list encodeMember memberList.members )
-        ]
+type alias ChannelEventUidData data =
+    { channel : String
+    , event : String
+    , uid : String
+    , data : data
+    }
 
 
-badMemberList =
-    E.object
-        [ ( "me", badMember )
-        , ( "members", E.list encodeMember memberList.members )
-        ]
+expected : ChannelEventUidData Data
+expected =
+    { channel = "ABC"
+    , event = "Halloween"
+    , uid = "a.b"
+    , data = { name = "jane" }
+    }
 
 
-decodeMember =
-    D.decodeValue (memberDecoder infoDecoder)
+encoded : D.Value
+encoded =
+    example dataEncoder expected
 
 
-decodeMemberList =
-    D.decodeValue (memberListDecoder infoDecoder)
+uidData : UidData
+uidData =
+    { uid = expected.uid, data = expected.data }
+
+
+type Msg
+    = Full (ChannelEventUidData Data)
+    | Some UidData
+    | WTF String
 
 
 suite : Test
 suite =
     describe "Pusher tests"
-        [ test "decodeMember returns an error when its argument can't be parsed" <|
-            \_ -> decodeMember badMember |> Expect.err
-        , test "decodeMember returns Ok when the argument is a Member" <|
-            \_ -> decodeMember (encodeMember jane) |> Expect.equal (Ok jane)
-        , test "decodeMemberList returns Ok with all .info fields decoded when they are encoded correctly" <|
-            \_ -> decodeMemberList encodedMemberList |> Expect.equal (Ok memberList)
-        , test "decodeMemberList returns an error when the `me` field can't be parsed" <|
-            \_ -> decodeMemberList badMemberList |> Expect.err
+        [ test "withEvent returns the value of the `event` field" <|
+            \_ ->
+                D.decodeValue withEvent encoded |> Expect.equal (Ok expected.event)
+        , test "withX for all X returns the whole megilla" <|
+            \_ ->
+                let
+                    decoder =
+                        D.map4 ChannelEventUidData
+                            withChannel
+                            withEvent
+                            withUid
+                            (withData dataDecoder)
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok expected)
+        , test "tagMapN works like Decode.mapN but adds the given variant tag" <|
+            \_ ->
+                let
+                    decoder =
+                        tagMap4 Full
+                            ChannelEventUidData
+                            withChannel
+                            withEvent
+                            withUid
+                            (withData dataDecoder)
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok (Full expected))
+        , test "withUid and withData return those fields" <|
+            \_ ->
+                let
+                    decoder =
+                        tagMap2 Some UidData withUid (withData dataDecoder)
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok (Some uidData))
+        , test "the xIs filters allow the decoders to return Ok when the incoming field meets their specification" <|
+            \_ ->
+                let
+                    decoder =
+                        tagMap2 Some UidData withUid (withData dataDecoder)
+                            |> channelIs "ABC"
+                            |> eventIs "Halloween"
+                            |> uidIs "a.b"
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok (Some uidData))
+        , describe "when an xIs filter doesn't match the incoming field, the result is an Error" <|
+            let
+                decoder =
+                    tagMap2 Some UidData withUid (withData dataDecoder)
+
+                run filter =
+                    D.decodeValue (filter "bwa ha ah!" decoder) encoded
+            in
+            [ test "chanelIs" <|
+                \_ -> run channelIs |> Expect.err
+            , test "eventIs" <|
+                \_ -> run channelIs |> Expect.err
+            , test "uidIs" <|
+                \_ -> run channelIs |> Expect.err
+            ]
+        , test "The xIs filters can be used in oneOf chains" <|
+            \_ ->
+                let
+                    decoder =
+                        D.oneOf
+                            [ tagMap4 Full
+                                ChannelEventUidData
+                                withChannel
+                                withEvent
+                                withUid
+                                (withData dataDecoder)
+                                |> channelIs "CBS"
+                            , tagMap2 Some UidData withUid (withData dataDecoder)
+                                |> eventIs "Halloween"
+                            , tagMap WTF identity withEvent |> channelIs "ABC"
+                            ]
+                in
+                D.decodeValue decoder encoded |> Expect.equal (Ok (Some uidData))
         ]
