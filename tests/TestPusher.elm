@@ -77,6 +77,12 @@ expectedMember =
     { uid = expected.uid, name = expected.data.name }
 
 
+type alias MemberOnChannel =
+    { channel : String
+    , member : Member
+    }
+
+
 type Msg
     = Full (ChannelEventUidData Data)
     | Some UidData
@@ -85,6 +91,7 @@ type Msg
     | MemberAdded Member
     | MemberRemoved Member
     | Subscribers MemberData
+    | MemberAddedOnChannel MemberOnChannel
 
 
 suite : Test
@@ -180,6 +187,18 @@ suite =
 
                 isOk msg =
                     Expect.equal (Ok msg)
+
+                encodeMember m =
+                    E.object
+                        [ ( "uid", E.string m.uid )
+                        , ( "data", E.object [ ( "name", E.string m.name ) ] )
+                        ]
+
+                memberAdded =
+                    encode { expected | event = "pusher:member_added" }
+
+                memberRemoved =
+                    encode { expected | event = "pusher:member_removed" }
             in
             [ test "Ensure getMember works as expected" <|
                 \_ ->
@@ -193,19 +212,30 @@ suite =
                     let
                         decoder =
                             D.map MemberAdded getMember |> isAdded
-
-                        memberAdded =
-                            encode { expected | event = "pusher:member_added" }
                     in
                     D.decodeValue decoder memberAdded |> isOk (MemberAdded expectedMember)
+            , test "isAdded with channel" <|
+                \_ ->
+                    let
+                        decoder =
+                            tagMap2
+                                MemberAddedOnChannel
+                                MemberOnChannel
+                                withChannel
+                                getMember
+                                |> isAdded
+
+                        expectedChannelMember =
+                            MemberOnChannel expected.channel
+                                (Member expected.uid expected.data.name)
+                    in
+                    D.decodeValue decoder memberAdded
+                        |> isOk (MemberAddedOnChannel expectedChannelMember)
             , test "isRemoved" <|
                 \_ ->
                     let
                         decoder =
                             D.map MemberRemoved getMember |> isRemoved
-
-                        memberRemoved =
-                            encode { expected | event = "pusher:member_removed" }
                     in
                     D.decodeValue decoder memberRemoved |> isOk (MemberRemoved expectedMember)
             , test "withMe{,embers}" <|
@@ -225,12 +255,6 @@ suite =
                                 , { uid = "3", name = "robin" }
                                 ]
                             }
-
-                        encodeMember m =
-                            E.object
-                                [ ( "uid", E.string m.uid )
-                                , ( "data", E.object [ ( "name", E.string m.name ) ] )
-                                ]
 
                         encodedMembers =
                             E.object

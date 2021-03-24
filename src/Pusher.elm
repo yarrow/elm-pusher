@@ -200,7 +200,7 @@ If you need the channel as well as the member information, you need to do a bit 
 
 then for member added, use
 
-    tagMap MemberAdded MemberOnChannel withChannel memberDecoder |> isAdded
+    tagMap2 MemberAdded MemberOnChannel withChannel memberDecoder |> isAdded
 
 -}
 isRemoved : Decoder a -> Decoder a
