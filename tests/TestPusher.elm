@@ -84,7 +84,7 @@ type Msg
     | WithName Member
     | MemberAdded Member
     | MemberRemoved Member
-    | SubscribedMembers MemberData
+    | Subscribers MemberData
 
 
 suite : Test
@@ -175,11 +175,8 @@ suite =
                 D.decodeValue decoder encoded |> Expect.equal (Ok (WithName expectedMember))
         , describe "Member operations" <|
             let
-                memberName =
-                    inData "name" D.string
-
                 getMember =
-                    D.map2 Member withUid memberName
+                    D.map2 Member withUid (inData "name" D.string)
 
                 isOk msg =
                     Expect.equal (Ok msg)
@@ -215,10 +212,10 @@ suite =
                 \_ ->
                     let
                         decoder =
-                            tagMap2 SubscribedMembers
+                            tagMap2 Subscribers
                                 MemberData
-                                (withMe Member memberName)
-                                (withMembers Member memberName)
+                                (withMe getMember)
+                                (withMembers getMember)
 
                         theMembers =
                             { me = expectedMember
@@ -241,6 +238,6 @@ suite =
                                 , ( "members", E.list encodeMember theMembers.members )
                                 ]
                     in
-                    D.decodeValue decoder encodedMembers |> isOk (SubscribedMembers theMembers)
+                    D.decodeValue decoder encodedMembers |> isOk (Subscribers theMembers)
             ]
         ]
