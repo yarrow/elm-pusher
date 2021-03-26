@@ -3,6 +3,7 @@ module TestPusher exposing
     , fieldDecoders
     , filters
     , memberOperations
+    , tagMapTests
     )
 
 import Expect
@@ -13,49 +14,8 @@ import Pusher exposing (..)
 import Test exposing (Test, describe, test)
 
 
-type alias ChannelEventUidData data =
-    { channel : String
-    , event : String
-    , uid : String
-    , data : data
-    }
 
-
-type alias Data =
-    { name : String }
-
-
-expected : ChannelEventUidData Data
-expected =
-    { channel = "ABC"
-    , event = "Halloween"
-    , uid = "a.b"
-    , data = { name = "jane" }
-    }
-
-
-encode r =
-    let
-        dataEncoder d =
-            E.object [ ( "name", E.string d.name ) ]
-    in
-    E.object
-        [ ( "channel", E.string r.channel )
-        , ( "event", E.string r.event )
-        , ( "uid", E.string r.uid )
-        , ( "data", dataEncoder r.data )
-        ]
-
-
-encoded : D.Value
-encoded =
-    encode expected
-
-
-type Msg
-    = Full (ChannelEventUidData Data)
-    | Some UidData
-    | WTF String
+-- Tests for field decoders (like withEvent, or withData dataDecoder
 
 
 fieldDecoders : Test
@@ -100,10 +60,59 @@ fieldDecoders =
         ]
 
 
+type alias ChannelEventUidData data =
+    { channel : String
+    , event : String
+    , uid : String
+    , data : data
+    }
+
+
+type alias Data =
+    { name : String }
+
+
+expected : ChannelEventUidData Data
+expected =
+    { channel = "ABC"
+    , event = "Halloween"
+    , uid = "a.b"
+    , data = { name = "jane" }
+    }
+
+
+encode r =
+    let
+        dataEncoder datum =
+            E.object [ ( "name", E.string datum.name ) ]
+    in
+    E.object
+        [ ( "channel", E.string r.channel )
+        , ( "event", E.string r.event )
+        , ( "uid", E.string r.uid )
+        , ( "data", dataEncoder r.data )
+        ]
+
+
+encoded : D.Value
+encoded =
+    encode expected
+
+
+type Msg
+    = Full (ChannelEventUidData Data)
+    | Some UidData
+    | WTF String
+
+
 type alias UidData =
     { uid : String
     , data : Data
     }
+
+
+
+-- tests for filters (like eventIs "county election")
 
 
 uidData : UidData
@@ -167,6 +176,10 @@ filters =
                 in
                 D.decodeValue decoder encoded |> Expect.equal (Ok (Some uidData))
         ]
+
+
+
+-- An extended filter test
 
 
 type PetLair
@@ -233,33 +246,8 @@ extendedFilterExample =
             D.decodeString decoder lairString |> Expect.equal (Ok lairs)
 
 
-type alias Member =
-    { uid : String, name : String }
 
-
-type alias MemberData =
-    { me : Member
-    , members : List Member
-    }
-
-
-expectedMember : Member
-expectedMember =
-    { uid = expected.uid, name = expected.data.name }
-
-
-type alias MemberOnChannel =
-    { channel : String
-    , member : Member
-    }
-
-
-type Mbr
-    = WithName Member
-    | MemberAdded Member
-    | MemberRemoved Member
-    | Subscribers MemberData
-    | MemberAddedOnChannel MemberOnChannel
+-- Tests for memberAdded, memberRemoved, withMe and withMembers
 
 
 memberOperations : Test
@@ -345,4 +333,184 @@ memberOperations =
                             ]
                 in
                 D.decodeValue decoder encodedMembers |> Expect.equal (Ok (Subscribers theMembers))
+        ]
+
+
+type alias Member =
+    { uid : String, name : String }
+
+
+type alias MemberData =
+    { me : Member
+    , members : List Member
+    }
+
+
+expectedMember : Member
+expectedMember =
+    { uid = expected.uid, name = expected.data.name }
+
+
+type alias MemberOnChannel =
+    { channel : String
+    , member : Member
+    }
+
+
+type Mbr
+    = WithName Member
+    | MemberAdded Member
+    | MemberRemoved Member
+    | Subscribers MemberData
+    | MemberAddedOnChannel MemberOnChannel
+
+
+
+-- Tests for tagMap, tagMap2, ... tagMap8
+
+
+type alias Record1 =
+    { f1 : Int }
+
+
+type alias Record2 =
+    { f1 : Int, f2 : Int }
+
+
+type alias Record3 =
+    { f1 : Int, f2 : Int, f3 : Int }
+
+
+type alias Record4 =
+    { f1 : Int, f2 : Int, f3 : Int, f4 : Int }
+
+
+type alias Record5 =
+    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int }
+
+
+type alias Record6 =
+    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int }
+
+
+type alias Record7 =
+    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int, f7 : Int }
+
+
+type alias Record8 =
+    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int, f7 : Int, f8 : Int }
+
+
+type BoilerPlate
+    = Variant1 Record1
+    | Variant2 Record2
+    | Variant3 Record3
+    | Variant4 Record4
+    | Variant5 Record5
+    | Variant6 Record6
+    | Variant7 Record7
+    | Variant8 Record8
+
+
+f n =
+    -- field name n
+    "f" ++ String.fromInt n
+
+
+d n =
+    -- decode an integer from field data.fn
+    inData (f n) D.int
+
+
+e n =
+    -- encode an integer as field fn
+    ( f n, E.int n )
+
+
+enc1 =
+    E.object [ ( "data", E.object [ e 1 ] ) ]
+
+
+enc2 =
+    E.object [ ( "data", E.object [ e 1, e 2 ] ) ]
+
+
+enc3 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3 ] ) ]
+
+
+enc4 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4 ] ) ]
+
+
+enc5 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5 ] ) ]
+
+
+enc6 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6 ] ) ]
+
+
+enc7 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6, e 7 ] ) ]
+
+
+enc8 =
+    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6, e 7, e 8 ] ) ]
+
+
+tagMapTests : Test
+tagMapTests =
+    describe "tagMapN tests" <|
+        let
+            decodes encodedValue decoder =
+                D.decodeValue decoder encodedValue
+
+            to =
+                Expect.equal
+        in
+        [ test "tagMapUnabbreviated" <|
+            \_ ->
+                D.decodeValue (tagMap Variant1 Record1 (d 1)) enc1
+                    |> Expect.equal (Ok (Variant1 (Record1 1)))
+        , test "tagMap" <|
+            \_ ->
+                tagMap Variant1 Record1 (d 1)
+                    |> decodes enc1
+                    |> to (Ok (Variant1 (Record1 1)))
+        , test "tagMap2" <|
+            \_ ->
+                tagMap2 Variant2 Record2 (d 1) (d 2)
+                    |> decodes enc2
+                    |> to (Ok (Variant2 (Record2 1 2)))
+        , test "tagMap3" <|
+            \_ ->
+                tagMap3 Variant3 Record3 (d 1) (d 2) (d 3)
+                    |> decodes enc3
+                    |> to (Ok (Variant3 (Record3 1 2 3)))
+        , test "tagMap4" <|
+            \_ ->
+                tagMap4 Variant4 Record4 (d 1) (d 2) (d 3) (d 4)
+                    |> decodes enc4
+                    |> to (Ok (Variant4 (Record4 1 2 3 4)))
+        , test "tagMap5" <|
+            \_ ->
+                tagMap5 Variant5 Record5 (d 1) (d 2) (d 3) (d 4) (d 5)
+                    |> decodes enc5
+                    |> to (Ok (Variant5 (Record5 1 2 3 4 5)))
+        , test "tagMap6" <|
+            \_ ->
+                tagMap6 Variant6 Record6 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6)
+                    |> decodes enc6
+                    |> to (Ok (Variant6 (Record6 1 2 3 4 5 6)))
+        , test "tagMap7" <|
+            \_ ->
+                tagMap7 Variant7 Record7 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6) (d 7)
+                    |> decodes enc7
+                    |> to (Ok (Variant7 (Record7 1 2 3 4 5 6 7)))
+        , test "tagMap8" <|
+            \_ ->
+                tagMap8 Variant8 Record8 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6) (d 7) (d 8)
+                    |> decodes enc8
+                    |> to (Ok (Variant8 (Record8 1 2 3 4 5 6 7 8)))
         ]
