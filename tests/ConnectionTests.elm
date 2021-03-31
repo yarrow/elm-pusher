@@ -1,14 +1,10 @@
 module ConnectionTests exposing (stateChangeTests)
 
 import Expect
-import Json.Decode as D exposing (Decoder)
+import Json.Decode as D
 import Json.Encode as E
 import Pusher.Connection as Connection exposing (..)
 import Test exposing (Test, describe, test)
-
-
-type alias Translation =
-    { string : String, variant : State }
 
 
 stateChangeTests : Test
@@ -22,20 +18,16 @@ stateChangeTests =
                 , { string = "unavailable", variant = Unavailable }
                 , { string = "failed", variant = Failed }
                 , { string = "disconnected", variant = Disconnected }
-                , { string = "unknown", variant = Unknown }
                 ]
-        in
-        [ describe "fromString" <|
-            let
-                testFromString state =
-                    test state.string <|
-                        \_ -> Connection.fromString state.string |> Expect.equal state.variant
 
-                testCases =
-                    { string = "Arf!Meow!", variant = Unknown } :: states
-            in
-            List.map testFromString testCases
-        , describe "toString" <|
+            encode prev cur =
+                E.object
+                    [ ( "event", E.string ":state_change" )
+                    , ( "previous", E.string prev )
+                    , ( "current", E.string cur )
+                    ]
+        in
+        [ describe "toString" <|
             let
                 testToString state =
                     test state.string <|
@@ -46,12 +38,6 @@ stateChangeTests =
             List.map testToString states
         , describe "Decoding" <|
             let
-                event =
-                    ( "event", E.string "connection!state_change" )
-
-                encode prev cur =
-                    E.object [ event, ( "previous", E.string prev ), ( "current", E.string cur ) ]
-
                 testDecode prev cur =
                     let
                         encoded =
@@ -64,4 +50,12 @@ stateChangeTests =
                         \_ -> D.decodeValue stateChange encoded |> Expect.equal (Ok expected)
             in
             List.concatMap (\prev -> List.map (testDecode prev) states) states
+        , describe "Unknown values result in errors" <|
+            [ test "bad `previous` value" <|
+                \_ ->
+                    D.decodeValue stateChange (encode "arf" "connected") |> Expect.err
+            , test "bad `current` value" <|
+                \_ ->
+                    D.decodeValue stateChange (encode "connected" "meow") |> Expect.err
+            ]
         ]

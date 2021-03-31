@@ -1,8 +1,8 @@
-module Pusher.Connection exposing (State(..), fromString, toString, StateChange, stateChange)
+module Pusher.Connection exposing (State(..), toString, StateChange, stateChange)
 
 {-| Pusher connections ...
 
-@docs State, fromString, toString, StateChange, stateChange
+@docs State, toString, StateChange, stateChange
 
 -}
 
@@ -18,7 +18,6 @@ import Pusher exposing (eventIs)
   - Unavailable — The Pusher server can't be reached: internet connection lost, Pusher server down, etc. May be temporary.
   - Failed — The browser doesn't support Pusher.
   - Disconnected — The application has closed the connection.
-  - Unknown — The connection state reported by Pusher wasn't one of "initialized", "connecting", "connected", "unavailable", "failed", or "disconnected".
 
 -}
 type State
@@ -28,34 +27,6 @@ type State
     | Unavailable
     | Failed
     | Disconnected
-    | Unknown
-
-
-{-| Change a `String` into a `Connection` `State`. If the given string is not one defined by [Pusher](https://pusher.com/docs/channels/using_channels/connection#available-states), then return `Unknown`.
--}
-fromString : String -> State
-fromString string =
-    case string of
-        "initialized" ->
-            Initialized
-
-        "connecting" ->
-            Connecting
-
-        "connected" ->
-            Connected
-
-        "unavailable" ->
-            Unavailable
-
-        "failed" ->
-            Failed
-
-        "disconnected" ->
-            Disconnected
-
-        _ ->
-            Unknown
 
 
 {-| Change a `Connection` `State` into its string representation.
@@ -81,22 +52,47 @@ toString state =
         Disconnected ->
             "disconnected"
 
-        Unknown ->
-            "unknown"
-
 
 {-| -}
 type alias StateChange =
     { previous : State, current : State }
 
 
-{-| The `stateChange` decoder takes a JSON object with an `event` field of `connection!state_change`, and `previous` and `current` fields that are `String`s. It decodes the object into a `StateChange` record.
+{-| The `stateChange` decoder takes a JSON object with an `event` field of `":state_change"`, and `previous` and `current` fields that are `String`s. It decodes the object into a `StateChange` record.
 -}
 stateChange : Decoder StateChange
 stateChange =
-    let
-        decodeState fieldName =
-            Decode.map fromString (Decode.field fieldName Decode.string)
-    in
     Decode.map2 StateChange (decodeState "previous") (decodeState "current")
-        |> eventIs "connection!state_change"
+        |> eventIs ":state_change"
+
+
+{-| Decodes a `State` contained in a named field
+-}
+decodeState : String -> Decoder State
+decodeState fieldName =
+    let
+        stateFromString : String -> Decoder State
+        stateFromString string =
+            case string of
+                "initialized" ->
+                    Decode.succeed Initialized
+
+                "connecting" ->
+                    Decode.succeed Connecting
+
+                "connected" ->
+                    Decode.succeed Connected
+
+                "unavailable" ->
+                    Decode.succeed Unavailable
+
+                "failed" ->
+                    Decode.succeed Failed
+
+                "disconnected" ->
+                    Decode.succeed Disconnected
+
+                _ ->
+                    Decode.fail ("Unexpected connection state " ++ string)
+    in
+    Decode.field fieldName (Decode.string |> Decode.andThen stateFromString)
