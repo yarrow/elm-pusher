@@ -11,13 +11,13 @@ stateChangeTests : Test
 stateChangeTests =
     describe "State Change tests" <|
         let
-            states =
-                [ { string = "initialized", variant = Initialized }
-                , { string = "connecting", variant = Connecting }
-                , { string = "connected", variant = Connected }
-                , { string = "unavailable", variant = Unavailable }
-                , { string = "failed", variant = Failed }
-                , { string = "disconnected", variant = Disconnected }
+            glossary =
+                [ { string = "initialized", state = Initialized }
+                , { string = "connecting", state = Connecting }
+                , { string = "connected", state = Connected }
+                , { string = "unavailable", state = Unavailable }
+                , { string = "failed", state = Failed }
+                , { string = "disconnected", state = Disconnected }
                 ]
 
             encode prev cur =
@@ -29,13 +29,13 @@ stateChangeTests =
         in
         [ describe "toString" <|
             let
-                testToString state =
-                    test state.string <|
+                testToString gloss =
+                    test gloss.string <|
                         \_ ->
-                            Connection.toString state.variant
-                                |> Expect.equal state.string
+                            Connection.toString gloss.state
+                                |> Expect.equal gloss.string
             in
-            List.map testToString states
+            List.map testToString glossary
         , describe "Decoding" <|
             let
                 testDecode prev cur =
@@ -44,12 +44,12 @@ stateChangeTests =
                             encode prev.string cur.string
 
                         expected =
-                            StateChange prev.variant cur.variant
+                            StateChange prev.state cur.state
                     in
                     test (prev.string ++ " -> " ++ cur.string) <|
                         \_ -> D.decodeValue stateChange encoded |> Expect.equal (Ok expected)
             in
-            List.concatMap (\prev -> List.map (testDecode prev) states) states
+            List.concatMap (\prev -> List.map (testDecode prev) glossary) glossary
         , describe "Unknown values result in errors" <|
             [ test "bad `previous` value" <|
                 \_ ->
