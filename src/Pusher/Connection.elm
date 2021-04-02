@@ -7,7 +7,7 @@ module Pusher.Connection exposing (State(..), toString, StateChange, stateChange
 -}
 
 import Json.Decode as Decode exposing (Decoder)
-import Pusher exposing (eventIs, inData)
+import Pusher.Decode exposing (eventIs, inData)
 
 
 {-| See the [Pusher Connection documentation](https://pusher.com/docs/channels/using_channels/connection#available-states). You can ask a Pusher connection to report when its state changes. The possible states are:

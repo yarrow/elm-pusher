@@ -1,4 +1,4 @@
-module Pusher exposing
+module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , withMe, withMembers, isAdded, isRemoved

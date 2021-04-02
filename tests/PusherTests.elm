@@ -10,7 +10,7 @@ import Expect
 import Json.Decode as D exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as E
-import Pusher exposing (..)
+import Pusher.Decode exposing (..)
 import Test exposing (Test, describe, test)
 
 
