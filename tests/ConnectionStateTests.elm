@@ -1,4 +1,4 @@
-module ConnectionTests exposing (stateChangeTests)
+module ConnectionStateTests exposing (stateChangeTests)
 
 import Expect
 import Json.Decode as D

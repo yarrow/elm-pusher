@@ -1,4 +1,4 @@
-module PusherTests exposing
+module DecodeTests exposing
     ( extendedFilterExample
     , fieldDecoders
     , filters
