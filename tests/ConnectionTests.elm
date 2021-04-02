@@ -3,7 +3,7 @@ module ConnectionTests exposing (stateChangeTests)
 import Expect
 import Json.Decode as D
 import Json.Encode as E
-import Pusher.Connection as Connection exposing (..)
+import Pusher.ConnectionState as State exposing (..)
 import Test exposing (Test, describe, test)
 
 
@@ -36,7 +36,7 @@ stateChangeTests =
                 testToString gloss =
                     test gloss.string <|
                         \_ ->
-                            Connection.toString gloss.state
+                            State.toString gloss.state
                                 |> Expect.equal gloss.string
             in
             List.map testToString glossary

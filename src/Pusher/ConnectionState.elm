@@ -1,4 +1,4 @@
-module Pusher.Connection exposing (State(..), toString, StateChange, stateChange)
+module Pusher.ConnectionState exposing (State(..), toString, StateChange, stateChange)
 
 {-| Pusher connections ...
 
@@ -29,7 +29,7 @@ type State
     | Disconnected
 
 
-{-| Change a `Connection` `State` into its string representation.
+{-| Change a `State` into its string representation.
 -}
 toString : State -> String
 toString state =
