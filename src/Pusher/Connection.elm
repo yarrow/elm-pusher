@@ -7,7 +7,7 @@ module Pusher.Connection exposing (State(..), toString, StateChange, stateChange
 -}
 
 import Json.Decode as Decode exposing (Decoder)
-import Pusher exposing (eventIs)
+import Pusher exposing (eventIs, inData)
 
 
 {-| See the [Pusher Connection documentation](https://pusher.com/docs/channels/using_channels/connection#available-states). You can ask a Pusher connection to report when its state changes. The possible states are:
@@ -95,4 +95,4 @@ decodeState fieldName =
                 _ ->
                     Decode.fail ("Unexpected connection state " ++ string)
     in
-    Decode.field fieldName (Decode.string |> Decode.andThen stateFromString)
+    inData fieldName (Decode.string |> Decode.andThen stateFromString)

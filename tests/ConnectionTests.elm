@@ -23,8 +23,12 @@ stateChangeTests =
             encode prev cur =
                 E.object
                     [ ( "event", E.string ":state_change" )
-                    , ( "previous", E.string prev )
-                    , ( "current", E.string cur )
+                    , ( "data"
+                      , E.object
+                            [ ( "previous", E.string prev )
+                            , ( "current", E.string cur )
+                            ]
+                      )
                     ]
         in
         [ describe "toString" <|
