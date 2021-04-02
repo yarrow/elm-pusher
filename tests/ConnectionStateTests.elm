@@ -31,12 +31,12 @@ stateChangeTests =
                       )
                     ]
         in
-        [ describe "toString" <|
+        [ describe "fromConnectionState" <|
             let
                 testToString gloss =
                     test gloss.string <|
                         \_ ->
-                            State.toString gloss.state
+                            State.fromConnectionState gloss.state
                                 |> Expect.equal gloss.string
             in
             List.map testToString glossary

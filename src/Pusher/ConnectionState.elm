@@ -1,8 +1,8 @@
-module Pusher.ConnectionState exposing (State(..), toString, StateChange, stateChange)
+module Pusher.ConnectionState exposing (State(..), fromConnectionState, StateChange, stateChange)
 
 {-| Pusher connections ...
 
-@docs State, toString, StateChange, stateChange
+@docs State, fromConnectionState, StateChange, stateChange
 
 -}
 
@@ -31,8 +31,8 @@ type State
 
 {-| Change a `State` into its string representation.
 -}
-toString : State -> String
-toString state =
+fromConnectionState : State -> String
+fromConnectionState state =
     case state of
         Initialized ->
             "initialized"
