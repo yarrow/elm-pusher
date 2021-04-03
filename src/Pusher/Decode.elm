@@ -163,7 +163,7 @@ Here's how you might build a decoder for a `pusher:subscription_succeeded` event
         in
         Decode.map2 Member withUid memberName
 
-    memberDecoderData =
+    memberDataDecoder =
         Decode.map3
             MemberData
             withChannel
