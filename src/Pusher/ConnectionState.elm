@@ -95,4 +95,4 @@ decodeState fieldName =
                 _ ->
                     Decode.fail ("Unexpected connection state " ++ string)
     in
-    inData fieldName (Decode.string |> Decode.andThen stateFromString)
+    inData [ fieldName ] (Decode.string |> Decode.andThen stateFromString)

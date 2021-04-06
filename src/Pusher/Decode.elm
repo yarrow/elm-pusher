@@ -81,12 +81,12 @@ withData =
 
 {-| Sometimes it's more convenient to reach into the `data` field and pull out subfields. (If `data` has only one field, for instance.)
 
-`inData "name" decoder`, for instance, is equivalent to `Decode.at [ "data", "name"] decoder`
+`inData ["name"] decoder`, for instance, is equivalent to `Decode.at [ "data", "name"] decoder`
 
 -}
-inData : String -> Decoder a -> Decoder a
-inData subfield =
-    Decode.at [ "data", subfield ]
+inData : List String -> Decoder a -> Decoder a
+inData subfields =
+    Decode.at ("data" :: subfields)
 
 
 {-| `channelIs "ABC"` fails unless the incoming channel is "ABC"

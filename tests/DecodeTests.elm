@@ -55,9 +55,19 @@ fieldDecoders =
             \_ ->
                 let
                     decoder =
-                        tagMap2 WithName Member withUid (inData "name" D.string)
+                        tagMap2 WithName Member withUid (inData [ "name" ] D.string)
                 in
                 D.decodeValue decoder encoded |> Expect.equal (Ok (WithName expectedMember))
+        , test "The inData decoder can reach deep into the incoming data field" <|
+            \_ ->
+                let
+                    source =
+                        """ { "data":{ "name":{ "nombre":"jane" } } } """
+
+                    decoder =
+                        D.map Data (inData [ "name", "nombre" ] D.string)
+                in
+                D.decodeString decoder source |> Expect.equal (Ok { name = "jane" })
         ]
 
 
@@ -197,7 +207,7 @@ type alias Doghouse =
 
 dogHouse : Decoder PetLair
 dogHouse =
-    tagMap2 Dog Doghouse (inData "color" D.string) (inData "volume" D.int) |> eventIs "Dog"
+    tagMap2 Dog Doghouse (inData [ "color" ] D.string) (inData [ "volume" ] D.int) |> eventIs "Dog"
 
 
 type alias CatTree =
@@ -208,7 +218,7 @@ type alias CatTree =
 
 catTree : Decoder PetLair
 catTree =
-    tagMap2 Cat CatTree (inData "color" D.string) (inData "height" D.int) |> eventIs "Cat"
+    tagMap2 Cat CatTree (inData [ "color" ] D.string) (inData [ "height" ] D.int) |> eventIs "Cat"
 
 
 type alias SpiderWeb =
@@ -219,7 +229,7 @@ type alias SpiderWeb =
 
 spiderWeb : Decoder PetLair
 spiderWeb =
-    tagMap2 Spider SpiderWeb (inData "strength" D.int) (inData "strands" D.int) |> eventIs "Spider"
+    tagMap2 Spider SpiderWeb (inData [ "strength" ] D.int) (inData [ "strands" ] D.int) |> eventIs "Spider"
 
 
 extendedFilterExample : Test
@@ -256,7 +266,7 @@ memberOperations =
     describe "Member operations" <|
         let
             getMember =
-                D.map2 Member withUid (inData "name" D.string)
+                D.map2 Member withUid (inData [ "name" ] D.string)
 
             encodeMember m =
                 E.object
@@ -420,7 +430,7 @@ f n =
 
 d n =
     -- decode an integer from field data.fn
-    inData (f n) D.int
+    inData [ f n ] D.int
 
 
 e n =

@@ -38,7 +38,7 @@ Here's how you might build a decoder for a `pusher:subscription_succeeded` event
     memberDecoder =
         let
             memberName =
-                inData "name" Decode.string
+                inData [ "name" ] Decode.string
         in
         Decode.map2 Member withUid memberName
 
