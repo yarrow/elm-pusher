@@ -2,6 +2,7 @@ module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
+    , ErrorInfo, ErrorKind(..), errorReport, messageFor
     )
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
@@ -46,30 +47,39 @@ The `channel` and `event` fields are strings, so you could use them, for instanc
 
 @docs tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
 
+
+# Error Reports
+
+Pusher subscription errors are received as `pusher:subscription_error` events on the channel where subscription was attempted.
+
+Pusher also reports [connection errors](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#connection-closure) (when the internet conection has been interupted, for instance, or when we haven't set up our Pusher connection information properly.) We report those as if they were events, on the fake `:connection` channel. (`:connection` is not a legal channel name.)
+
+@docs ErrorInfo, ErrorKind, errorReport, messageFor
+
 -}
 
-import Json.Decode as Decode exposing (Decoder, Error(..))
+import Json.Decode as Decode exposing (Decoder, Error(..), int, maybe, string)
 
 
 {-| Abbreviation for `Decode.field "channel" Decode.string`
 -}
 withChannel : Decoder String
 withChannel =
-    Decode.field "channel" Decode.string
+    Decode.field "channel" string
 
 
 {-| Abbreviation for `Decode.field "event" Decode.string`
 -}
 withEvent : Decoder String
 withEvent =
-    Decode.field "event" Decode.string
+    Decode.field "event" string
 
 
 {-| Abbreviation for `Decode.field "uid" Decode.string`
 -}
 withUid : Decoder String
 withUid =
-    Decode.field "uid" Decode.string
+    Decode.field "uid" string
 
 
 {-| `withData decoder` is an abbreviation for `Decode.field "data" decoder`
@@ -120,7 +130,7 @@ is field valueNeeded decoder =
             else
                 Decode.fail valueNeeded
     in
-    Decode.field field Decode.string |> Decode.andThen fieldIs
+    Decode.field field string |> Decode.andThen fieldIs
 
 
 {-| -}
@@ -169,3 +179,137 @@ tagMap7 tag constructor a b c d e f g =
 tagMap8 : (value -> msg) -> (a -> b -> c -> d -> e -> f -> g -> h -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g -> Decoder h -> Decoder msg
 tagMap8 tag constructor a b c d e f g h =
     Decode.map tag <| Decode.map8 constructor a b c d e f g h
+
+
+{-| -}
+type ErrorKind
+    = ConnectionError
+    | SubscriptionError
+
+
+{-| -}
+type alias ErrorInfo =
+    { tag : String
+    , message : Maybe String
+    , code : Maybe Int
+    , kind : ErrorKind
+    }
+
+
+{-| -}
+messageFor : ErrorInfo -> String
+messageFor report =
+    case report.kind of
+        SubscriptionError ->
+            let
+                status =
+                    Maybe.withDefault 0 report.code
+            in
+            if status == 401 then
+                "Authentication failed"
+
+            else
+                "Authentication error: " ++ String.fromInt status
+
+        _ ->
+            case report.message of
+                Just msg ->
+                    msg
+
+                Nothing ->
+                    let
+                        code =
+                            Maybe.withDefault 0 report.code
+                    in
+                    if 1000 <= code && code < 2000 then
+                        -- A WebSocket connection error — see https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+                        "Error connecting to the internet (" ++ String.fromInt code ++ ")"
+
+                    else if 4000 <= code && code < 5000 then
+                        -- A Pusher connection error — see https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
+                        "Error connecting to Pusher (" ++ String.fromInt code ++ ")"
+
+                    else if 2000 <= code && code < 4000 then
+                        -- WebSocket codes reserved for extensions and libararies
+                        "Connection error (" ++ String.fromInt code ++ ")"
+
+                    else
+                        "Error " ++ report.tag ++ " (" ++ String.fromInt code ++ ")"
+
+
+{-| We want to give our callers a simpler interface than Pusher gives us.
+`toError` tries to handle generalized versions of the Pusher errors I've seen,
+with a "throw up our hands and just show the user some JSON" final fallback.
+
+Here are some example errors from the overall Pusher connection:
+
+  - {type: "WebSocketError", error: {isTrusted: true}}
+  - {type: "PusherError", data: {code: 1006}}
+  - {type: "WebSocketError", error: {type: "PusherError", data: {code: 4001, message: "App key ..."}}}
+
+The `code` field of these errors, when present, should be in the 1000s or
+4000s: 1000s for general WebSocket errors, 4000s for Pusher-specific errors.
+
+And here's a pusher:subscription\_error:
+
+  - type: "AuthError", error: "Unable to retrieve auth ...", status: 401}
+
+The `status` field, if present, is an HTTP return code (so less than 1000 and
+distinct from the WebSocket codes).
+
+So: we attempt to return a meaningful error number in the `code` field, and a
+meaningful error message in the `message` field.
+
+The other option would be to return a custom type with a bunch of very similar
+variants. Seems better to simplify it here than make our callers do giant case
+statements.
+
+-}
+fallback : ErrorKind -> Decoder ErrorInfo
+fallback kind =
+    Decode.map4 ErrorInfo
+        (Decode.succeed "UnknownError")
+        (Decode.succeed Nothing)
+        (Decode.succeed Nothing)
+        (Decode.succeed kind)
+
+
+{-| -}
+connectionError : Decoder ErrorInfo
+connectionError =
+    eventIs ":connection_error" <|
+        Decode.oneOf
+            [ Decode.map4 ErrorInfo
+                -- value of the form {type: "WebSocketError", error: {type: "PusherError", ... }}
+                (inData [ "error", "type" ] string)
+                (maybe (inData [ "error", "data", "message" ] string))
+                (maybe (inData [ "error", "data", "code" ] int))
+                (Decode.succeed ConnectionError)
+            , Decode.map4 ErrorInfo
+                -- value of the form {type: "PusherError", data: { ... }}
+                (inData [ "type" ] string)
+                (maybe (inData [ "data", "message" ] string))
+                (maybe (inData [ "data", "code" ] int))
+                (Decode.succeed ConnectionError)
+            , fallback ConnectionError
+            ]
+
+
+{-| -}
+subscriptionError : Decoder ErrorInfo
+subscriptionError =
+    eventIs "pusher:subscription_error" <|
+        Decode.oneOf
+            [ Decode.map4 ErrorInfo
+                (inData [ "type" ] string)
+                (maybe (inData [ "error" ] string))
+                (maybe (inData [ "status" ] int))
+                (Decode.succeed SubscriptionError)
+            , fallback SubscriptionError
+            ]
+
+
+{-| -}
+errorReport : Decoder ErrorInfo
+errorReport =
+    Decode.oneOf [ subscriptionError, connectionError ]

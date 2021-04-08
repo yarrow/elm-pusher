@@ -1,5 +1,6 @@
 module DecodeTests exposing
-    ( extendedFilterExample
+    ( errorReportTests
+    , extendedFilterExample
     , fieldDecoders
     , filters
     , memberOperations
@@ -524,4 +525,121 @@ tagMapTests =
                 tagMap8 Variant8 Record8 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6) (d 7) (d 8)
                     |> decodes enc8
                     |> to (Ok (Variant8 (Record8 1 2 3 4 5 6 7 8)))
+        ]
+
+
+errorReportTests : Test
+errorReportTests =
+    describe "Error parsing" <|
+        [ test "Subscription Error" <|
+            \_ ->
+                let
+                    source =
+                        """{
+                        "channel": "presence-main",
+                        "event": "pusher:subscription_error",
+                        "data": {
+                            "type": "AuthError",
+                            "error": "Gosh darn it!",
+                            "status": 401
+                            }
+                        }"""
+
+                    wanted : ErrorInfo
+                    wanted =
+                        { tag = "AuthError"
+                        , message = Just "Gosh darn it!"
+                        , code = Just 401
+                        , kind = SubscriptionError
+                        }
+                in
+                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+        , test "Pusher connection error" <|
+            \_ ->
+                let
+                    source =
+                        """{
+                        "channel": ":connection",
+                        "event": ":connection_error",
+                        "data": { "type": "WebSocketError",
+                                "error": {
+                                    "type": "PusherError",
+                                    "data": {
+                                        "code": 4001,
+                                        "message": "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
+                                    }
+                                }
+                            }
+                        }"""
+
+                    wanted : ErrorInfo
+                    wanted =
+                        { tag = "PusherError"
+                        , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
+                        , code = Just 4001
+                        , kind = ConnectionError
+                        }
+                in
+                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+        , test "Super-minimal error report is decoded to something reasonable" <|
+            \_ ->
+                let
+                    source =
+                        """{
+                        "channel": ":connection",
+                        "event": ":connection_error",
+                        "data": {
+                            "type": "WebSocketError",
+                            "error": { "isTrusted": true }
+                            }
+                        }"""
+
+                    wanted : ErrorInfo
+                    wanted =
+                        { tag = "WebSocketError"
+                        , message = Nothing
+                        , code = Nothing
+                        , kind = ConnectionError
+                        }
+                in
+                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+        , test "If there's a code there will be a message" <|
+            \_ ->
+                let
+                    source =
+                        """{
+                            "channel": ":connection",
+                            "event": ":connection_error",
+                            "data": {
+                                "type": "PusherError",
+                                "data": { "code": 1006 }
+                                }
+                            }"""
+
+                    wanted =
+                        { tag = "PusherError"
+                        , message = Nothing
+                        , code = Just 1006
+                        , kind = ConnectionError
+                        }
+                in
+                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+        , test "Undecodeable error reports at least get the kind right" <|
+            \_ ->
+                let
+                    source =
+                        [ """{ "event": ":connection_error", "channel": ":connection" }"""
+                        , """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
+                        ]
+
+                    wanted kind =
+                        Ok
+                            { tag = "UnknownError"
+                            , message = Nothing
+                            , code = Nothing
+                            , kind = kind
+                            }
+                in
+                List.map (D.decodeString errorReport) source
+                    |> Expect.equal (List.map wanted [ ConnectionError, SubscriptionError ])
         ]
