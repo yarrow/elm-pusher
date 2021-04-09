@@ -189,7 +189,8 @@ type ErrorKind
 
 {-| -}
 type alias ErrorReport =
-    { tag : String
+    { channel : String
+    , tag : String
     , message : Maybe String
     , code : Maybe Int
     , kind : ErrorKind
@@ -267,7 +268,8 @@ statements.
 -}
 fallback : ErrorKind -> Decoder ErrorReport
 fallback kind =
-    Decode.map4 ErrorReport
+    Decode.map5 ErrorReport
+        withChannel
         (Decode.succeed "UnknownError")
         (Decode.succeed Nothing)
         (Decode.succeed Nothing)
@@ -279,14 +281,16 @@ connectionError : Decoder ErrorReport
 connectionError =
     eventIs ":connection_error" <|
         Decode.oneOf
-            [ Decode.map4 ErrorReport
+            [ Decode.map5 ErrorReport
                 -- value of the form {type: "WebSocketError", error: {type: "PusherError", ... }}
+                withChannel
                 (inData [ "error", "type" ] string)
                 (maybe (inData [ "error", "data", "message" ] string))
                 (maybe (inData [ "error", "data", "code" ] int))
                 (Decode.succeed ConnectionError)
-            , Decode.map4 ErrorReport
+            , Decode.map5 ErrorReport
                 -- value of the form {type: "PusherError", data: { ... }}
+                withChannel
                 (inData [ "type" ] string)
                 (maybe (inData [ "data", "message" ] string))
                 (maybe (inData [ "data", "code" ] int))
@@ -300,7 +304,8 @@ subscriptionError : Decoder ErrorReport
 subscriptionError =
     eventIs "pusher:subscription_error" <|
         Decode.oneOf
-            [ Decode.map4 ErrorReport
+            [ Decode.map5 ErrorReport
+                withChannel
                 (inData [ "type" ] string)
                 (maybe (inData [ "error" ] string))
                 (maybe (inData [ "status" ] int))

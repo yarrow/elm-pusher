@@ -547,7 +547,8 @@ errorReportTests =
 
                     wanted : ErrorReport
                     wanted =
-                        { tag = "AuthError"
+                        { channel = "presence-main"
+                        , tag = "AuthError"
                         , message = Just "Gosh darn it!"
                         , code = Just 401
                         , kind = SubscriptionError
@@ -574,7 +575,8 @@ errorReportTests =
 
                     wanted : ErrorReport
                     wanted =
-                        { tag = "PusherError"
+                        { channel = ":connection"
+                        , tag = "PusherError"
                         , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , code = Just 4001
                         , kind = ConnectionError
@@ -596,7 +598,8 @@ errorReportTests =
 
                     wanted : ErrorReport
                     wanted =
-                        { tag = "WebSocketError"
+                        { channel = ":connection"
+                        , tag = "WebSocketError"
                         , message = Nothing
                         , code = Nothing
                         , kind = ConnectionError
@@ -617,14 +620,15 @@ errorReportTests =
                             }"""
 
                     wanted =
-                        { tag = "PusherError"
+                        { channel = ":connection"
+                        , tag = "PusherError"
                         , message = Nothing
                         , code = Just 1006
                         , kind = ConnectionError
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
-        , test "Undecodeable error reports at least get the kind right" <|
+        , test "Undecodeable error reports at least get the right event, channel, and kind" <|
             \_ ->
                 let
                     source =
@@ -632,14 +636,21 @@ errorReportTests =
                         , """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
                         ]
 
-                    wanted kind =
-                        Ok
-                            { tag = "UnknownError"
-                            , message = Nothing
-                            , code = Nothing
-                            , kind = kind
-                            }
+                    wanted =
+                        [ { channel = ":connection"
+                          , tag = "UnknownError"
+                          , message = Nothing
+                          , code = Nothing
+                          , kind = ConnectionError
+                          }
+                        , { channel = "ABC"
+                          , tag = "UnknownError"
+                          , message = Nothing
+                          , code = Nothing
+                          , kind = SubscriptionError
+                          }
+                        ]
                 in
                 List.map (D.decodeString errorReport) source
-                    |> Expect.equal (List.map wanted [ ConnectionError, SubscriptionError ])
+                    |> Expect.equal (List.map Ok wanted)
         ]
