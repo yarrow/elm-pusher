@@ -549,7 +549,7 @@ errorReportTests =
                     wanted =
                         { channel = "presence-main"
                         , event = SubscriptionError
-                        , message = Just "Gosh darn it!"
+                        , text = Just "Gosh darn it!"
                         , code = Just 401
                         }
                 in
@@ -576,7 +576,7 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
+                        , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , code = Just 4001
                         }
                 in
@@ -598,12 +598,12 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , message = Nothing
+                        , text = Nothing
                         , code = Nothing
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
-        , test "If there's a code there will be a message" <|
+        , test "We can handle the case of a code with no text message" <|
             \_ ->
                 let
                     source =
@@ -619,7 +619,7 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , message = Nothing
+                        , text = Nothing
                         , code = Just 1006
                         }
                 in
@@ -635,12 +635,12 @@ errorReportTests =
                     wanted =
                         [ { channel = ":connection"
                           , event = ConnectionError
-                          , message = Nothing
+                          , text = Nothing
                           , code = Nothing
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
-                          , message = Nothing
+                          , text = Nothing
                           , code = Nothing
                           }
                         ]

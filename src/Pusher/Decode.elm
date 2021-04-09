@@ -191,7 +191,7 @@ type ErrorKind
 type alias ErrorReport =
     { channel : String
     , event : ErrorKind
-    , message : Maybe String
+    , text : Maybe String
     , code : Maybe Int
     }
 
@@ -217,7 +217,7 @@ The `status` field, if present, is an HTTP return code (so less than 1000 and
 distinct from the WebSocket codes).
 
 So: we attempt to return a meaningful error number in the `code` field, and a
-meaningful error message in the `message` field.
+meaningful error message in the `text` field.
 
 The other option would be to return a custom type with a bunch of very similar
 variants. Seems better to simplify it here than make our callers do giant case
@@ -304,7 +304,7 @@ messageFor report =
             List.concat [ subscriptionFailed, why ] |> String.concat
 
         _ ->
-            case report.message of
+            case report.text of
                 Just msg ->
                     msg
 
