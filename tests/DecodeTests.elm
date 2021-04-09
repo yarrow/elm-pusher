@@ -545,7 +545,7 @@ errorReportTests =
                             }
                         }"""
 
-                    wanted : ErrorInfo
+                    wanted : ErrorReport
                     wanted =
                         { tag = "AuthError"
                         , message = Just "Gosh darn it!"
@@ -572,7 +572,7 @@ errorReportTests =
                             }
                         }"""
 
-                    wanted : ErrorInfo
+                    wanted : ErrorReport
                     wanted =
                         { tag = "PusherError"
                         , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
@@ -594,7 +594,7 @@ errorReportTests =
                             }
                         }"""
 
-                    wanted : ErrorInfo
+                    wanted : ErrorReport
                     wanted =
                         { tag = "WebSocketError"
                         , message = Nothing

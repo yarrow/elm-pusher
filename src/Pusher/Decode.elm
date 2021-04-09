@@ -2,7 +2,7 @@ module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
-    , ErrorInfo, ErrorKind(..), errorReport, messageFor
+    , ErrorReport, ErrorKind(..), errorReport, messageFor
     )
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
@@ -54,7 +54,7 @@ Pusher subscription errors are received as `pusher:subscription_error` events on
 
 Pusher also reports [connection errors](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#connection-closure) (when the internet conection has been interupted, for instance, or when we haven't set up our Pusher connection information properly.) We report those as if they were events, on the fake `:connection` channel. (`:connection` is not a legal channel name.)
 
-@docs ErrorInfo, ErrorKind, errorReport, messageFor
+@docs ErrorReport, ErrorKind, errorReport, messageFor
 
 -}
 
@@ -188,7 +188,7 @@ type ErrorKind
 
 
 {-| -}
-type alias ErrorInfo =
+type alias ErrorReport =
     { tag : String
     , message : Maybe String
     , code : Maybe Int
@@ -197,7 +197,7 @@ type alias ErrorInfo =
 
 
 {-| -}
-messageFor : ErrorInfo -> String
+messageFor : ErrorReport -> String
 messageFor report =
     case report.kind of
         SubscriptionError ->
@@ -265,9 +265,9 @@ variants. Seems better to simplify it here than make our callers do giant case
 statements.
 
 -}
-fallback : ErrorKind -> Decoder ErrorInfo
+fallback : ErrorKind -> Decoder ErrorReport
 fallback kind =
-    Decode.map4 ErrorInfo
+    Decode.map4 ErrorReport
         (Decode.succeed "UnknownError")
         (Decode.succeed Nothing)
         (Decode.succeed Nothing)
@@ -275,17 +275,17 @@ fallback kind =
 
 
 {-| -}
-connectionError : Decoder ErrorInfo
+connectionError : Decoder ErrorReport
 connectionError =
     eventIs ":connection_error" <|
         Decode.oneOf
-            [ Decode.map4 ErrorInfo
+            [ Decode.map4 ErrorReport
                 -- value of the form {type: "WebSocketError", error: {type: "PusherError", ... }}
                 (inData [ "error", "type" ] string)
                 (maybe (inData [ "error", "data", "message" ] string))
                 (maybe (inData [ "error", "data", "code" ] int))
                 (Decode.succeed ConnectionError)
-            , Decode.map4 ErrorInfo
+            , Decode.map4 ErrorReport
                 -- value of the form {type: "PusherError", data: { ... }}
                 (inData [ "type" ] string)
                 (maybe (inData [ "data", "message" ] string))
@@ -296,11 +296,11 @@ connectionError =
 
 
 {-| -}
-subscriptionError : Decoder ErrorInfo
+subscriptionError : Decoder ErrorReport
 subscriptionError =
     eventIs "pusher:subscription_error" <|
         Decode.oneOf
-            [ Decode.map4 ErrorInfo
+            [ Decode.map4 ErrorReport
                 (inData [ "type" ] string)
                 (maybe (inData [ "error" ] string))
                 (maybe (inData [ "status" ] int))
@@ -310,6 +310,6 @@ subscriptionError =
 
 
 {-| -}
-errorReport : Decoder ErrorInfo
+errorReport : Decoder ErrorReport
 errorReport =
     Decode.oneOf [ subscriptionError, connectionError ]
