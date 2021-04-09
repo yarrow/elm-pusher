@@ -196,61 +196,6 @@ type alias ErrorReport =
     }
 
 
-{-| -}
-messageFor : ErrorReport -> String
-messageFor report =
-    case report.event of
-        SubscriptionError ->
-            let
-                subscriptionFailed =
-                    [ "Subscription to ", report.channel, " failed" ]
-
-                why =
-                    case report.code of
-                        Just status ->
-                            [ ": HTTP status ", String.fromInt status ]
-
-                        Nothing ->
-                            []
-            in
-            List.concat [ subscriptionFailed, why ] |> String.concat
-
-        _ ->
-            case report.message of
-                Just msg ->
-                    msg
-
-                Nothing ->
-                    let
-                        code =
-                            Maybe.withDefault 0 report.code
-
-                        status =
-                            case report.code of
-                                Nothing ->
-                                    ""
-
-                                Just n ->
-                                    String.concat [ " (", String.fromInt n, ")" ]
-                    in
-                    if 1000 <= code && code < 2000 then
-                        -- A WebSocket connection error
-                        -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
-                        "Error connecting to the internet" ++ status
-
-                    else if 4000 <= code && code < 5000 then
-                        -- A Pusher connection error
-                        -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
-                        "Error connecting to Pusher" ++ status
-
-                    else if 2000 <= code && code < 4000 then
-                        -- WebSocket codes reserved for extensions and libararies
-                        "Connection error" ++ status
-
-                    else
-                        "Connection error" ++ status
-
-
 {-| We want to give our callers a simpler interface than Pusher gives us.
 `toError` tries to handle generalized versions of the Pusher errors I've seen,
 with a "throw up our hands and just show the user some JSON" final fallback.
@@ -337,3 +282,58 @@ subscriptionError =
 errorReport : Decoder ErrorReport
 errorReport =
     Decode.oneOf [ subscriptionError, connectionError ]
+
+
+{-| -}
+messageFor : ErrorReport -> String
+messageFor report =
+    case report.event of
+        SubscriptionError ->
+            let
+                subscriptionFailed =
+                    [ "Subscription to ", report.channel, " failed" ]
+
+                why =
+                    case report.code of
+                        Just status ->
+                            [ ": HTTP status ", String.fromInt status ]
+
+                        Nothing ->
+                            []
+            in
+            List.concat [ subscriptionFailed, why ] |> String.concat
+
+        _ ->
+            case report.message of
+                Just msg ->
+                    msg
+
+                Nothing ->
+                    let
+                        code =
+                            Maybe.withDefault 0 report.code
+
+                        status =
+                            case report.code of
+                                Nothing ->
+                                    ""
+
+                                Just n ->
+                                    String.concat [ " (", String.fromInt n, ")" ]
+                    in
+                    if 1000 <= code && code < 2000 then
+                        -- A WebSocket connection error
+                        -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+                        "Error connecting to the internet" ++ status
+
+                    else if 4000 <= code && code < 5000 then
+                        -- A Pusher connection error
+                        -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
+                        "Error connecting to Pusher" ++ status
+
+                    else if 2000 <= code && code < 4000 then
+                        -- WebSocket codes reserved for extensions and libararies
+                        "Connection error" ++ status
+
+                    else
+                        "Connection error" ++ status
