@@ -548,10 +548,10 @@ errorReportTests =
                     wanted : ErrorReport
                     wanted =
                         { channel = "presence-main"
+                        , event = SubscriptionError
                         , tag = "AuthError"
                         , message = Just "Gosh darn it!"
                         , code = Just 401
-                        , kind = SubscriptionError
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -576,10 +576,10 @@ errorReportTests =
                     wanted : ErrorReport
                     wanted =
                         { channel = ":connection"
+                        , event = ConnectionError
                         , tag = "PusherError"
                         , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , code = Just 4001
-                        , kind = ConnectionError
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -599,10 +599,10 @@ errorReportTests =
                     wanted : ErrorReport
                     wanted =
                         { channel = ":connection"
+                        , event = ConnectionError
                         , tag = "WebSocketError"
                         , message = Nothing
                         , code = Nothing
-                        , kind = ConnectionError
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -621,14 +621,14 @@ errorReportTests =
 
                     wanted =
                         { channel = ":connection"
+                        , event = ConnectionError
                         , tag = "PusherError"
                         , message = Nothing
                         , code = Just 1006
-                        , kind = ConnectionError
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
-        , test "Undecodeable error reports at least get the right event, channel, and kind" <|
+        , test "Undecodeable error reports at least get the right channel and event" <|
             \_ ->
                 let
                     source =
@@ -638,16 +638,16 @@ errorReportTests =
 
                     wanted =
                         [ { channel = ":connection"
+                          , event = ConnectionError
                           , tag = "UnknownError"
                           , message = Nothing
                           , code = Nothing
-                          , kind = ConnectionError
                           }
                         , { channel = "ABC"
+                          , event = SubscriptionError
                           , tag = "UnknownError"
                           , message = Nothing
                           , code = Nothing
-                          , kind = SubscriptionError
                           }
                         ]
                 in

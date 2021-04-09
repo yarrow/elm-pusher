@@ -190,17 +190,17 @@ type ErrorKind
 {-| -}
 type alias ErrorReport =
     { channel : String
+    , event : ErrorKind
     , tag : String
     , message : Maybe String
     , code : Maybe Int
-    , kind : ErrorKind
     }
 
 
 {-| -}
 messageFor : ErrorReport -> String
 messageFor report =
-    case report.kind of
+    case report.event of
         SubscriptionError ->
             let
                 status =
@@ -267,13 +267,13 @@ statements.
 
 -}
 fallback : ErrorKind -> Decoder ErrorReport
-fallback kind =
+fallback event =
     Decode.map5 ErrorReport
         withChannel
+        (Decode.succeed event)
         (Decode.succeed "UnknownError")
         (Decode.succeed Nothing)
         (Decode.succeed Nothing)
-        (Decode.succeed kind)
 
 
 {-| -}
@@ -284,17 +284,17 @@ connectionError =
             [ Decode.map5 ErrorReport
                 -- value of the form {type: "WebSocketError", error: {type: "PusherError", ... }}
                 withChannel
+                (Decode.succeed ConnectionError)
                 (inData [ "error", "type" ] string)
                 (maybe (inData [ "error", "data", "message" ] string))
                 (maybe (inData [ "error", "data", "code" ] int))
-                (Decode.succeed ConnectionError)
             , Decode.map5 ErrorReport
                 -- value of the form {type: "PusherError", data: { ... }}
                 withChannel
+                (Decode.succeed ConnectionError)
                 (inData [ "type" ] string)
                 (maybe (inData [ "data", "message" ] string))
                 (maybe (inData [ "data", "code" ] int))
-                (Decode.succeed ConnectionError)
             , fallback ConnectionError
             ]
 
@@ -306,10 +306,10 @@ subscriptionError =
         Decode.oneOf
             [ Decode.map5 ErrorReport
                 withChannel
+                (Decode.succeed SubscriptionError)
                 (inData [ "type" ] string)
                 (maybe (inData [ "error" ] string))
                 (maybe (inData [ "status" ] int))
-                (Decode.succeed SubscriptionError)
             , fallback SubscriptionError
             ]
 
