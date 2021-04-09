@@ -203,14 +203,18 @@ messageFor report =
     case report.event of
         SubscriptionError ->
             let
-                status =
-                    Maybe.withDefault 0 report.code
-            in
-            if status == 401 then
-                "Authentication failed"
+                subscriptionFailed =
+                    [ "Subscription to ", report.channel, " failed" ]
 
-            else
-                "Authentication error: " ++ String.fromInt status
+                why =
+                    case report.code of
+                        Just status ->
+                            [ ": HTTP status ", String.fromInt status ]
+
+                        Nothing ->
+                            []
+            in
+            List.concat [ subscriptionFailed, why ] |> String.concat
 
         _ ->
             case report.message of
