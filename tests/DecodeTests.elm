@@ -549,7 +549,6 @@ errorReportTests =
                     wanted =
                         { channel = "presence-main"
                         , event = SubscriptionError
-                        , tag = "AuthError"
                         , message = Just "Gosh darn it!"
                         , code = Just 401
                         }
@@ -577,7 +576,6 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , tag = "PusherError"
                         , message = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , code = Just 4001
                         }
@@ -600,7 +598,6 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , tag = "WebSocketError"
                         , message = Nothing
                         , code = Nothing
                         }
@@ -622,7 +619,6 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , tag = "PusherError"
                         , message = Nothing
                         , code = Just 1006
                         }
@@ -639,13 +635,11 @@ errorReportTests =
                     wanted =
                         [ { channel = ":connection"
                           , event = ConnectionError
-                          , tag = "UnknownError"
                           , message = Nothing
                           , code = Nothing
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
-                          , tag = "UnknownError"
                           , message = Nothing
                           , code = Nothing
                           }

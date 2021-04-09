@@ -191,7 +191,6 @@ type ErrorKind
 type alias ErrorReport =
     { channel : String
     , event : ErrorKind
-    , tag : String
     , message : Maybe String
     , code : Maybe Int
     }
@@ -225,21 +224,31 @@ messageFor report =
                     let
                         code =
                             Maybe.withDefault 0 report.code
+
+                        status =
+                            case report.code of
+                                Nothing ->
+                                    ""
+
+                                Just n ->
+                                    String.concat [ " (", String.fromInt n, ")" ]
                     in
                     if 1000 <= code && code < 2000 then
-                        -- A WebSocket connection error — see https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
-                        "Error connecting to the internet (" ++ String.fromInt code ++ ")"
+                        -- A WebSocket connection error
+                        -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+                        "Error connecting to the internet" ++ status
 
                     else if 4000 <= code && code < 5000 then
-                        -- A Pusher connection error — see https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
-                        "Error connecting to Pusher (" ++ String.fromInt code ++ ")"
+                        -- A Pusher connection error
+                        -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
+                        "Error connecting to Pusher" ++ status
 
                     else if 2000 <= code && code < 4000 then
                         -- WebSocket codes reserved for extensions and libararies
-                        "Connection error (" ++ String.fromInt code ++ ")"
+                        "Connection error" ++ status
 
                     else
-                        "Error " ++ report.tag ++ " (" ++ String.fromInt code ++ ")"
+                        "Connection error" ++ status
 
 
 {-| We want to give our callers a simpler interface than Pusher gives us.
@@ -272,12 +281,16 @@ statements.
 -}
 fallback : ErrorKind -> Decoder ErrorReport
 fallback event =
-    Decode.map5 ErrorReport
+    Decode.map4 ErrorReport
         withChannel
         (Decode.succeed event)
-        (Decode.succeed "UnknownError")
         (Decode.succeed Nothing)
         (Decode.succeed Nothing)
+
+
+has : List String -> Decoder a -> Decoder a
+has path decoder =
+    inData path string |> Decode.andThen (\_ -> decoder)
 
 
 {-| -}
@@ -285,20 +298,22 @@ connectionError : Decoder ErrorReport
 connectionError =
     eventIs ":connection_error" <|
         Decode.oneOf
-            [ Decode.map5 ErrorReport
-                -- value of the form {type: "WebSocketError", error: {type: "PusherError", ... }}
-                withChannel
-                (Decode.succeed ConnectionError)
-                (inData [ "error", "type" ] string)
-                (maybe (inData [ "error", "data", "message" ] string))
-                (maybe (inData [ "error", "data", "code" ] int))
-            , Decode.map5 ErrorReport
-                -- value of the form {type: "PusherError", data: { ... }}
-                withChannel
-                (Decode.succeed ConnectionError)
-                (inData [ "type" ] string)
-                (maybe (inData [ "data", "message" ] string))
-                (maybe (inData [ "data", "code" ] int))
+            [ has [ "error", "type" ] <|
+                Decode.map4
+                    ErrorReport
+                    -- value of the form
+                    -- {type: "WebSocketError", error: {type: "PusherError", ... }}
+                    withChannel
+                    (Decode.succeed ConnectionError)
+                    (maybe (inData [ "error", "data", "message" ] string))
+                    (maybe (inData [ "error", "data", "code" ] int))
+            , has [ "type" ] <|
+                Decode.map4 ErrorReport
+                    -- value of the form {type: "PusherError", data: { ... }}
+                    withChannel
+                    (Decode.succeed ConnectionError)
+                    (maybe (inData [ "data", "message" ] string))
+                    (maybe (inData [ "data", "code" ] int))
             , fallback ConnectionError
             ]
 
@@ -308,12 +323,12 @@ subscriptionError : Decoder ErrorReport
 subscriptionError =
     eventIs "pusher:subscription_error" <|
         Decode.oneOf
-            [ Decode.map5 ErrorReport
-                withChannel
-                (Decode.succeed SubscriptionError)
-                (inData [ "type" ] string)
-                (maybe (inData [ "error" ] string))
-                (maybe (inData [ "status" ] int))
+            [ has [ "type" ] <|
+                Decode.map4 ErrorReport
+                    withChannel
+                    (Decode.succeed SubscriptionError)
+                    (maybe (inData [ "error" ] string))
+                    (maybe (inData [ "status" ] int))
             , fallback SubscriptionError
             ]
 
