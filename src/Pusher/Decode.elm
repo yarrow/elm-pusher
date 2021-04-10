@@ -191,8 +191,8 @@ type ErrorKind
 type alias ErrorReport =
     { channel : String
     , event : ErrorKind
-    , text : Maybe String
     , code : Maybe Int
+    , text : Maybe String
     }
 
 
@@ -250,15 +250,15 @@ connectionError =
                     -- {type: "WebSocketError", error: {type: "PusherError", ... }}
                     withChannel
                     (Decode.succeed ConnectionError)
-                    (maybe (inData [ "error", "data", "message" ] string))
                     (maybe (inData [ "error", "data", "code" ] int))
+                    (maybe (inData [ "error", "data", "message" ] string))
             , has [ "type" ] <|
                 Decode.map4 ErrorReport
                     -- value of the form {type: "PusherError", data: { ... }}
                     withChannel
                     (Decode.succeed ConnectionError)
-                    (maybe (inData [ "data", "message" ] string))
                     (maybe (inData [ "data", "code" ] int))
+                    (maybe (inData [ "data", "message" ] string))
             , fallback ConnectionError
             ]
 
@@ -272,8 +272,8 @@ subscriptionError =
                 Decode.map4 ErrorReport
                     withChannel
                     (Decode.succeed SubscriptionError)
-                    (maybe (inData [ "error" ] string))
                     (maybe (inData [ "status" ] int))
+                    (maybe (inData [ "error" ] string))
             , fallback SubscriptionError
             ]
 

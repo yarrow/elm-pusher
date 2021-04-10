@@ -549,8 +549,8 @@ errorReportTests =
                     wanted =
                         { channel = "presence-main"
                         , event = SubscriptionError
-                        , text = Just "Gosh darn it!"
                         , code = Just 401
+                        , text = Just "Gosh darn it!"
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -576,8 +576,8 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , code = Just 4001
+                        , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -598,8 +598,8 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , text = Nothing
                         , code = Nothing
+                        , text = Nothing
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -619,8 +619,8 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , text = Nothing
                         , code = Just 1006
+                        , text = Nothing
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -635,13 +635,13 @@ errorReportTests =
                     wanted =
                         [ { channel = ":connection"
                           , event = ConnectionError
-                          , text = Nothing
                           , code = Nothing
+                          , text = Nothing
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
-                          , text = Nothing
                           , code = Nothing
+                          , text = Nothing
                           }
                         ]
                 in
