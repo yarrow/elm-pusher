@@ -192,7 +192,7 @@ type alias ErrorReport =
     { channel : String
     , event : ErrorKind
     , code : Int
-    , text : Maybe String
+    , text : String
     , json : Decode.Value
     }
 
@@ -228,13 +228,15 @@ statements.
 errorDecoder :
     ErrorKind
     -> Decoder Int
-    -> Decoder (Maybe String)
+    -> Decoder String
     -> Decoder ErrorReport
 errorDecoder event code text =
     let
-        orZero : Decoder Int
         orZero =
             maybe code |> Decode.map (Maybe.withDefault 0)
+
+        orNull =
+            maybe text |> Decode.map (Maybe.withDefault "")
 
         json =
             Decode.oneOf
@@ -242,12 +244,12 @@ errorDecoder event code text =
                 , Decode.value -- when we don't have have that
                 ]
     in
-    Decode.map5 ErrorReport withChannel (Decode.succeed event) orZero text json
+    Decode.map5 ErrorReport withChannel (Decode.succeed event) orZero orNull json
 
 
 fallback : ErrorKind -> Decoder ErrorReport
 fallback event =
-    errorDecoder event (Decode.succeed 0) (Decode.succeed Nothing)
+    errorDecoder event (Decode.succeed 0) (Decode.succeed "")
 
 
 has : List String -> Decoder a -> Decoder a
@@ -266,13 +268,13 @@ connectionError =
                     -- {type: "WebSocketError", error: {type: "PusherError", ... }}
                     ConnectionError
                     (inData [ "error", "data", "code" ] int)
-                    (maybe (inData [ "error", "data", "message" ] string))
+                    (inData [ "error", "data", "message" ] string)
             , has [ "type" ] <|
                 errorDecoder
                     -- value of the form {type: "PusherError", data: { ... }}
                     ConnectionError
                     (inData [ "data", "code" ] int)
-                    (maybe (inData [ "data", "message" ] string))
+                    (inData [ "data", "message" ] string)
             , fallback ConnectionError
             ]
 
@@ -286,7 +288,7 @@ subscriptionError =
                 errorDecoder
                     SubscriptionError
                     (inData [ "status" ] int)
-                    (maybe (inData [ "error" ] string))
+                    (inData [ "error" ] string)
             , fallback SubscriptionError
             ]
 
@@ -300,41 +302,40 @@ errorReport =
 {-| -}
 messageFor : ErrorReport -> String
 messageFor report =
-    case report.text of
-        Just msg ->
-            msg
+    if report.text /= "" then
+        report.text
 
-        Nothing ->
-            let
-                code =
-                    report.code
+    else
+        let
+            code =
+                report.code
 
-                status =
-                    case report.code of
-                        0 ->
-                            ""
+            status =
+                case report.code of
+                    0 ->
+                        ""
 
-                        n ->
-                            String.concat [ " (", String.fromInt n, ")" ]
-            in
-            case report.event of
-                SubscriptionError ->
-                    String.concat [ "Subscription to ", report.channel, " failed", status ]
+                    n ->
+                        String.concat [ " (", String.fromInt n, ")" ]
+        in
+        case report.event of
+            SubscriptionError ->
+                String.concat [ "Subscription to ", report.channel, " failed", status ]
 
-                ConnectionError ->
-                    if 1000 <= code && code < 2000 then
-                        -- A WebSocket connection error
-                        -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
-                        "Error connecting to the internet" ++ status
+            ConnectionError ->
+                if 1000 <= code && code < 2000 then
+                    -- A WebSocket connection error
+                    -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+                    "Error connecting to the internet" ++ status
 
-                    else if 4000 <= code && code < 5000 then
-                        -- A Pusher connection error
-                        -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
-                        "Error connecting to Pusher" ++ status
+                else if 4000 <= code && code < 5000 then
+                    -- A Pusher connection error
+                    -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
+                    "Error connecting to Pusher" ++ status
 
-                    else if 2000 <= code && code < 4000 then
-                        -- WebSocket codes reserved for extensions and libararies
-                        "Connection error" ++ status
+                else if 2000 <= code && code < 4000 then
+                    -- WebSocket codes reserved for extensions and libararies
+                    "Connection error" ++ status
 
-                    else
-                        "Connection error" ++ status
+                else
+                    "Connection error" ++ status

@@ -585,7 +585,7 @@ errorReportTests =
                         { channel = "presence-main"
                         , event = SubscriptionError
                         , code = 401
-                        , text = Just "Gosh darn it!"
+                        , text = "Gosh darn it!"
                         , json = dataField source
                         }
                 in
@@ -613,7 +613,7 @@ errorReportTests =
                         { channel = ":connection"
                         , event = ConnectionError
                         , code = 4001
-                        , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
+                        , text = "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , json = dataField source
                         }
                 in
@@ -636,7 +636,7 @@ errorReportTests =
                         { channel = ":connection"
                         , event = ConnectionError
                         , code = 0
-                        , text = Nothing
+                        , text = ""
                         , json = dataField source
                         }
                 in
@@ -658,7 +658,7 @@ errorReportTests =
                         { channel = ":connection"
                         , event = ConnectionError
                         , code = 1006
-                        , text = Nothing
+                        , text = ""
                         , json = dataField source
                         }
                 in
@@ -683,13 +683,13 @@ errorReportTests =
                         [ { channel = ":connection"
                           , event = ConnectionError
                           , code = 0
-                          , text = Nothing
+                          , text = ""
                           , json = encodeThe connection
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
                           , code = 0
-                          , text = Nothing
+                          , text = ""
                           , json = encodeThe subscription
                           }
                         ]
