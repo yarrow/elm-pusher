@@ -193,6 +193,7 @@ type alias ErrorReport =
     , event : ErrorKind
     , code : Maybe Int
     , text : Maybe String
+    , json : Decode.Value
     }
 
 
@@ -230,7 +231,14 @@ errorDecoder :
     -> Decoder (Maybe String)
     -> Decoder ErrorReport
 errorDecoder event code text =
-    Decode.map4 ErrorReport withChannel event code text
+    let
+        json =
+            Decode.oneOf
+                [ Decode.field "data" Decode.value -- when we have a `data` field
+                , Decode.value -- when we don't have have that
+                ]
+    in
+    Decode.map5 ErrorReport withChannel event code text json
 
 
 fallback : ErrorKind -> Decoder ErrorReport
