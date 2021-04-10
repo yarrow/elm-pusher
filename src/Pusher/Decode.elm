@@ -296,40 +296,28 @@ errorReport =
 {-| -}
 messageFor : ErrorReport -> String
 messageFor report =
-    case report.event of
-        SubscriptionError ->
+    case report.text of
+        Just msg ->
+            msg
+
+        Nothing ->
             let
-                subscriptionFailed =
-                    [ "Subscription to ", report.channel, " failed" ]
+                code =
+                    Maybe.withDefault 0 report.code
 
-                why =
+                status =
                     case report.code of
-                        Just status ->
-                            [ ": HTTP status ", String.fromInt status ]
-
                         Nothing ->
-                            []
+                            ""
+
+                        Just n ->
+                            String.concat [ " (", String.fromInt n, ")" ]
             in
-            List.concat [ subscriptionFailed, why ] |> String.concat
+            case report.event of
+                SubscriptionError ->
+                    String.concat [ "Subscription to ", report.channel, " failed", status ]
 
-        _ ->
-            case report.text of
-                Just msg ->
-                    msg
-
-                Nothing ->
-                    let
-                        code =
-                            Maybe.withDefault 0 report.code
-
-                        status =
-                            case report.code of
-                                Nothing ->
-                                    ""
-
-                                Just n ->
-                                    String.concat [ " (", String.fromInt n, ")" ]
-                    in
+                ConnectionError ->
                     if 1000 <= code && code < 2000 then
                         -- A WebSocket connection error
                         -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
