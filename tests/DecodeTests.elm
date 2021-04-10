@@ -531,6 +531,41 @@ tagMapTests =
 errorReportTests : Test
 errorReportTests =
     describe "Error parsing" <|
+        let
+            annotate report =
+                { channel = report.channel
+                , event = report.event
+                , code = report.code
+                , text = report.text
+                , json = E.encode 2 report.json
+                }
+
+            equivalent input output =
+                let
+                    report =
+                        case D.decodeString errorReport input of
+                            Ok r ->
+                                r
+
+                            Err _ ->
+                                Debug.todo "This can't happen: decoding failed"
+                in
+                annotate report
+                    |> Expect.equal (annotate output)
+
+            infallible : Decoder D.Value -> String -> D.Value
+            infallible decoder s =
+                case D.decodeString decoder s of
+                    Ok v ->
+                        v
+
+                    Err _ ->
+                        Debug.todo "This can't happen: decoding failed"
+
+            dataField : String -> D.Value
+            dataField =
+                infallible (D.field "data" D.value)
+        in
         [ test "Subscription Error" <|
             \_ ->
                 let
@@ -551,6 +586,7 @@ errorReportTests =
                         , event = SubscriptionError
                         , code = Just 401
                         , text = Just "Gosh darn it!"
+                        , json = dataField source
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -578,6 +614,7 @@ errorReportTests =
                         , event = ConnectionError
                         , code = Just 4001
                         , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
+                        , json = dataField source
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
@@ -600,9 +637,10 @@ errorReportTests =
                         , event = ConnectionError
                         , code = Nothing
                         , text = Nothing
+                        , json = dataField source
                         }
                 in
-                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+                equivalent source wanted
         , test "We can handle the case of a code with no text message" <|
             \_ ->
                 let
@@ -621,27 +659,38 @@ errorReportTests =
                         , event = ConnectionError
                         , code = Just 1006
                         , text = Nothing
+                        , json = dataField source
                         }
                 in
                 D.decodeString errorReport source |> Expect.equal (Ok wanted)
         , test "Undecodeable error reports at least get the right channel and event" <|
             \_ ->
                 let
+                    encodeThe : String -> D.Value
+                    encodeThe =
+                        infallible D.value
+
+                    connection =
+                        """{ "event": ":connection_error", "channel": ":connection" }"""
+
+                    subscription =
+                        """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
+
                     source =
-                        [ """{ "event": ":connection_error", "channel": ":connection" }"""
-                        , """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
-                        ]
+                        [ connection, subscription ]
 
                     wanted =
                         [ { channel = ":connection"
                           , event = ConnectionError
                           , code = Nothing
                           , text = Nothing
+                          , json = encodeThe connection
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
                           , code = Nothing
                           , text = Nothing
+                          , json = encodeThe subscription
                           }
                         ]
                 in
