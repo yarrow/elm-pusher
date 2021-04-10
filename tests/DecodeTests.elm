@@ -585,7 +585,7 @@ errorReportTests =
                         { channel = "presence-main"
                         , event = SubscriptionError
                         , code = 401
-                        , text = "Gosh darn it!"
+                        , text = "Subscription to presence-main failed: Gosh darn it!"
                         , json = dataField source
                         }
                 in
@@ -636,7 +636,7 @@ errorReportTests =
                         { channel = ":connection"
                         , event = ConnectionError
                         , code = 0
-                        , text = ""
+                        , text = "Connection error"
                         , json = dataField source
                         }
                 in
@@ -658,7 +658,7 @@ errorReportTests =
                         { channel = ":connection"
                         , event = ConnectionError
                         , code = 1006
-                        , text = ""
+                        , text = "Error connecting to the internet (1006)"
                         , json = dataField source
                         }
                 in
@@ -683,13 +683,13 @@ errorReportTests =
                         [ { channel = ":connection"
                           , event = ConnectionError
                           , code = 0
-                          , text = ""
+                          , text = "Connection error"
                           , json = encodeThe connection
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
                           , code = 0
-                          , text = ""
+                          , text = "Subscription to ABC failed"
                           , json = encodeThe subscription
                           }
                         ]

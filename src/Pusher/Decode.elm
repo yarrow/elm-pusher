@@ -58,7 +58,7 @@ Pusher also reports [connection errors](https://pusher.com/docs/channels/library
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, Error(..), int, maybe, string)
+import Json.Decode as Decode exposing (Decoder, Error(..), andThen, int, maybe, string)
 
 
 {-| Abbreviation for `Decode.field "channel" Decode.string`
@@ -232,10 +232,10 @@ errorDecoder :
     -> Decoder ErrorReport
 errorDecoder event code text =
     let
-        orZero =
+        codeOrZero =
             maybe code |> Decode.map (Maybe.withDefault 0)
 
-        orNull =
+        textOrEmpty =
             maybe text |> Decode.map (Maybe.withDefault "")
 
         json =
@@ -244,7 +244,75 @@ errorDecoder event code text =
                 , Decode.value -- when we don't have have that
                 ]
     in
-    Decode.map5 ErrorReport withChannel (Decode.succeed event) orZero orNull json
+    case event of
+        SubscriptionError ->
+            -- We add the channel to the error text for subscription errors (I haven't seen
+            -- a missing message for those, so we don't worry too much about that).
+            let
+                tag : String -> String -> Decoder String
+                tag channel msg =
+                    let
+                        failed =
+                            String.concat [ "Subscription to ", channel, " failed" ]
+                    in
+                    Decode.succeed <|
+                        if msg == "" then
+                            failed
+
+                        else
+                            String.concat [ failed, ": ", msg ]
+
+                showChannel : Decoder String
+                showChannel =
+                    withChannel |> andThen (\channel -> textOrEmpty |> andThen (tag channel))
+            in
+            Decode.map5 ErrorReport withChannel (Decode.succeed event) codeOrZero showChannel json
+
+        ConnectionError ->
+            -- The error text IS sometimes missing for connection errors
+            let
+                textOrCodeText : Decoder String
+                textOrCodeText =
+                    textOrEmpty |> andThen orCodeText
+
+                orCodeText : String -> Decoder String
+                orCodeText txt =
+                    if txt == "" then
+                        codeOrZero |> andThen (\c -> Decode.succeed (codeMessage c))
+
+                    else
+                        Decode.succeed txt
+            in
+            Decode.map5 ErrorReport withChannel (Decode.succeed event) codeOrZero textOrCodeText json
+
+
+codeMessage : Int -> String
+codeMessage code =
+    let
+        status =
+            case code of
+                0 ->
+                    ""
+
+                n ->
+                    String.concat [ " (", String.fromInt n, ")" ]
+    in
+    if 1000 <= code && code < 2000 then
+        -- A WebSocket connection error
+        -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+        "Error connecting to the internet" ++ status
+
+    else if 4000 <= code && code < 5000 then
+        -- A Pusher connection error
+        -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
+        "Error connecting to Pusher" ++ status
+
+    else if 2000 <= code && code < 4000 then
+        -- WebSocket codes reserved for extensions and libararies
+        "Connection error" ++ status
+
+    else
+        "Connection error" ++ status
 
 
 fallback : ErrorKind -> Decoder ErrorReport
