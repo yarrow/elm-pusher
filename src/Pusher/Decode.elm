@@ -224,13 +224,18 @@ variants. Seems better to simplify it here than make our callers do giant case
 statements.
 
 -}
+errorDecoder :
+    Decoder ErrorKind
+    -> Decoder (Maybe Int)
+    -> Decoder (Maybe String)
+    -> Decoder ErrorReport
+errorDecoder event code text =
+    Decode.map4 ErrorReport withChannel event code text
+
+
 fallback : ErrorKind -> Decoder ErrorReport
 fallback event =
-    Decode.map4 ErrorReport
-        withChannel
-        (Decode.succeed event)
-        (Decode.succeed Nothing)
-        (Decode.succeed Nothing)
+    errorDecoder (Decode.succeed event) (Decode.succeed Nothing) (Decode.succeed Nothing)
 
 
 has : List String -> Decoder a -> Decoder a
@@ -244,18 +249,15 @@ connectionError =
     eventIs ":connection_error" <|
         Decode.oneOf
             [ has [ "error", "type" ] <|
-                Decode.map4
-                    ErrorReport
+                errorDecoder
                     -- value of the form
                     -- {type: "WebSocketError", error: {type: "PusherError", ... }}
-                    withChannel
                     (Decode.succeed ConnectionError)
                     (maybe (inData [ "error", "data", "code" ] int))
                     (maybe (inData [ "error", "data", "message" ] string))
             , has [ "type" ] <|
-                Decode.map4 ErrorReport
+                errorDecoder
                     -- value of the form {type: "PusherError", data: { ... }}
-                    withChannel
                     (Decode.succeed ConnectionError)
                     (maybe (inData [ "data", "code" ] int))
                     (maybe (inData [ "data", "message" ] string))
@@ -269,8 +271,7 @@ subscriptionError =
     eventIs "pusher:subscription_error" <|
         Decode.oneOf
             [ has [ "type" ] <|
-                Decode.map4 ErrorReport
-                    withChannel
+                errorDecoder
                     (Decode.succeed SubscriptionError)
                     (maybe (inData [ "status" ] int))
                     (maybe (inData [ "error" ] string))
