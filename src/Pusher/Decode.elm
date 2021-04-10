@@ -226,7 +226,7 @@ statements.
 
 -}
 errorDecoder :
-    Decoder ErrorKind
+    ErrorKind
     -> Decoder Int
     -> Decoder (Maybe String)
     -> Decoder ErrorReport
@@ -242,12 +242,12 @@ errorDecoder event code text =
                 , Decode.value -- when we don't have have that
                 ]
     in
-    Decode.map5 ErrorReport withChannel event orZero text json
+    Decode.map5 ErrorReport withChannel (Decode.succeed event) orZero text json
 
 
 fallback : ErrorKind -> Decoder ErrorReport
 fallback event =
-    errorDecoder (Decode.succeed event) (Decode.succeed 0) (Decode.succeed Nothing)
+    errorDecoder event (Decode.succeed 0) (Decode.succeed Nothing)
 
 
 has : List String -> Decoder a -> Decoder a
@@ -264,13 +264,13 @@ connectionError =
                 errorDecoder
                     -- value of the form
                     -- {type: "WebSocketError", error: {type: "PusherError", ... }}
-                    (Decode.succeed ConnectionError)
+                    ConnectionError
                     (inData [ "error", "data", "code" ] int)
                     (maybe (inData [ "error", "data", "message" ] string))
             , has [ "type" ] <|
                 errorDecoder
                     -- value of the form {type: "PusherError", data: { ... }}
-                    (Decode.succeed ConnectionError)
+                    ConnectionError
                     (inData [ "data", "code" ] int)
                     (maybe (inData [ "data", "message" ] string))
             , fallback ConnectionError
@@ -284,7 +284,7 @@ subscriptionError =
         Decode.oneOf
             [ has [ "type" ] <|
                 errorDecoder
-                    (Decode.succeed SubscriptionError)
+                    SubscriptionError
                     (inData [ "status" ] int)
                     (maybe (inData [ "error" ] string))
             , fallback SubscriptionError
