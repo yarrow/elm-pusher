@@ -584,7 +584,7 @@ errorReportTests =
                     wanted =
                         { channel = "presence-main"
                         , event = SubscriptionError
-                        , code = Just 401
+                        , code = 401
                         , text = Just "Gosh darn it!"
                         , json = dataField source
                         }
@@ -612,7 +612,7 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , code = Just 4001
+                        , code = 4001
                         , text = Just "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
                         , json = dataField source
                         }
@@ -635,7 +635,7 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , code = Nothing
+                        , code = 0
                         , text = Nothing
                         , json = dataField source
                         }
@@ -657,7 +657,7 @@ errorReportTests =
                     wanted =
                         { channel = ":connection"
                         , event = ConnectionError
-                        , code = Just 1006
+                        , code = 1006
                         , text = Nothing
                         , json = dataField source
                         }
@@ -682,13 +682,13 @@ errorReportTests =
                     wanted =
                         [ { channel = ":connection"
                           , event = ConnectionError
-                          , code = Nothing
+                          , code = 0
                           , text = Nothing
                           , json = encodeThe connection
                           }
                         , { channel = "ABC"
                           , event = SubscriptionError
-                          , code = Nothing
+                          , code = 0
                           , text = Nothing
                           , json = encodeThe subscription
                           }

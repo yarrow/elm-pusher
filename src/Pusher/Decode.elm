@@ -191,7 +191,7 @@ type ErrorKind
 type alias ErrorReport =
     { channel : String
     , event : ErrorKind
-    , code : Maybe Int
+    , code : Int
     , text : Maybe String
     , json : Decode.Value
     }
@@ -227,23 +227,27 @@ statements.
 -}
 errorDecoder :
     Decoder ErrorKind
-    -> Decoder (Maybe Int)
+    -> Decoder Int
     -> Decoder (Maybe String)
     -> Decoder ErrorReport
 errorDecoder event code text =
     let
+        orZero : Decoder Int
+        orZero =
+            maybe code |> Decode.map (Maybe.withDefault 0)
+
         json =
             Decode.oneOf
                 [ Decode.field "data" Decode.value -- when we have a `data` field
                 , Decode.value -- when we don't have have that
                 ]
     in
-    Decode.map5 ErrorReport withChannel event code text json
+    Decode.map5 ErrorReport withChannel event orZero text json
 
 
 fallback : ErrorKind -> Decoder ErrorReport
 fallback event =
-    errorDecoder (Decode.succeed event) (Decode.succeed Nothing) (Decode.succeed Nothing)
+    errorDecoder (Decode.succeed event) (Decode.succeed 0) (Decode.succeed Nothing)
 
 
 has : List String -> Decoder a -> Decoder a
@@ -261,13 +265,13 @@ connectionError =
                     -- value of the form
                     -- {type: "WebSocketError", error: {type: "PusherError", ... }}
                     (Decode.succeed ConnectionError)
-                    (maybe (inData [ "error", "data", "code" ] int))
+                    (inData [ "error", "data", "code" ] int)
                     (maybe (inData [ "error", "data", "message" ] string))
             , has [ "type" ] <|
                 errorDecoder
                     -- value of the form {type: "PusherError", data: { ... }}
                     (Decode.succeed ConnectionError)
-                    (maybe (inData [ "data", "code" ] int))
+                    (inData [ "data", "code" ] int)
                     (maybe (inData [ "data", "message" ] string))
             , fallback ConnectionError
             ]
@@ -281,7 +285,7 @@ subscriptionError =
             [ has [ "type" ] <|
                 errorDecoder
                     (Decode.succeed SubscriptionError)
-                    (maybe (inData [ "status" ] int))
+                    (inData [ "status" ] int)
                     (maybe (inData [ "error" ] string))
             , fallback SubscriptionError
             ]
@@ -303,14 +307,14 @@ messageFor report =
         Nothing ->
             let
                 code =
-                    Maybe.withDefault 0 report.code
+                    report.code
 
                 status =
                     case report.code of
-                        Nothing ->
+                        0 ->
                             ""
 
-                        Just n ->
+                        n ->
                             String.concat [ " (", String.fromInt n, ")" ]
             in
             case report.event of
