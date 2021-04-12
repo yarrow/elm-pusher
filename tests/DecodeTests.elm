@@ -543,17 +543,12 @@ errorReportTests =
             equivalent input output =
                 let
                     report =
-                        case D.decodeString errorReport input of
-                            Ok r ->
-                                r
-
-                            Err _ ->
-                                Debug.todo "This can't happen: decoding failed"
+                        infallible errorReport input
                 in
                 annotate report
                     |> Expect.equal (annotate output)
 
-            infallible : Decoder D.Value -> String -> D.Value
+            infallible : Decoder a -> String -> a
             infallible decoder s =
                 case D.decodeString decoder s of
                     Ok v ->
@@ -562,9 +557,9 @@ errorReportTests =
                     Err _ ->
                         Debug.todo "This can't happen: decoding failed"
 
-            dataField : String -> D.Value
-            dataField =
-                infallible (D.field "data" D.value)
+            encodeThe : String -> D.Value
+            encodeThe =
+                infallible D.value
         in
         [ test "Subscription Error" <|
             \_ ->
@@ -586,10 +581,10 @@ errorReportTests =
                         , event = SubscriptionError
                         , code = 401
                         , text = "Subscription to presence-main failed: Gosh darn it!"
-                        , json = dataField source
+                        , json = encodeThe source
                         }
                 in
-                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+                equivalent source wanted
         , test "Pusher connection error" <|
             \_ ->
                 let
@@ -614,10 +609,10 @@ errorReportTests =
                         , event = ConnectionError
                         , code = 4001
                         , text = "App key REDACTED not in this cluster. Did you forget to specify the cluster?"
-                        , json = dataField source
+                        , json = encodeThe source
                         }
                 in
-                D.decodeString errorReport source |> Expect.equal (Ok wanted)
+                equivalent source wanted
         , test "Super-minimal error report is decoded to something reasonable" <|
             \_ ->
                 let
@@ -637,7 +632,7 @@ errorReportTests =
                         , event = ConnectionError
                         , code = 0
                         , text = "Connection error"
-                        , json = dataField source
+                        , json = encodeThe source
                         }
                 in
                 equivalent source wanted
@@ -659,41 +654,40 @@ errorReportTests =
                         , event = ConnectionError
                         , code = 1006
                         , text = "Error connecting to the internet (1006)"
-                        , json = dataField source
+                        , json = encodeThe source
                         }
                 in
-                D.decodeString errorReport source |> Expect.equal (Ok wanted)
-        , test "Undecodeable error reports at least get the right channel and event" <|
-            \_ ->
-                let
-                    encodeThe : String -> D.Value
-                    encodeThe =
-                        infallible D.value
+                equivalent source wanted
+        , describe "Undecodeable error reports at least get the right channel and event" <|
+            [ test "connection" <|
+                \_ ->
+                    let
+                        source =
+                            """{ "event": ":connection_error", "channel": ":connection" }"""
 
-                    connection =
-                        """{ "event": ":connection_error", "channel": ":connection" }"""
+                        wanted =
+                            { channel = ":connection"
+                            , event = ConnectionError
+                            , code = 0
+                            , text = "Connection error"
+                            , json = encodeThe source
+                            }
+                    in
+                    equivalent source wanted
+            , test "subscription" <|
+                \_ ->
+                    let
+                        source =
+                            """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
 
-                    subscription =
-                        """{ "event": "pusher:subscription_error", "channel": "ABC" }"""
-
-                    source =
-                        [ connection, subscription ]
-
-                    wanted =
-                        [ { channel = ":connection"
-                          , event = ConnectionError
-                          , code = 0
-                          , text = "Connection error"
-                          , json = encodeThe connection
-                          }
-                        , { channel = "ABC"
-                          , event = SubscriptionError
-                          , code = 0
-                          , text = "Subscription to ABC failed"
-                          , json = encodeThe subscription
-                          }
-                        ]
-                in
-                List.map (D.decodeString errorReport) source
-                    |> Expect.equal (List.map Ok wanted)
+                        wanted =
+                            { channel = "ABC"
+                            , event = SubscriptionError
+                            , code = 0
+                            , text = "Subscription to ABC failed"
+                            , json = encodeThe source
+                            }
+                    in
+                    equivalent source wanted
+            ]
         ]

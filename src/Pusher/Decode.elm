@@ -245,10 +245,7 @@ errorDecoder event code text =
             maybe text |> Decode.map (Maybe.withDefault "")
 
         json =
-            Decode.oneOf
-                [ Decode.field "data" Decode.value -- when we have a `data` field
-                , Decode.value -- when we don't have have that
-                ]
+            Decode.value
     in
     case event of
         SubscriptionError ->
