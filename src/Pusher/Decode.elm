@@ -2,7 +2,7 @@ module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
-    , ErrorReport, ErrorEvent(..), errorReport
+    , ErrorEvent(..), ErrorReport, errorReport
     )
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
@@ -54,7 +54,7 @@ Pusher subscription errors are received as `pusher:subscription_error` events on
 
 Pusher also reports [connection errors](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#connection-closure) (when the internet conection has been interupted, for instance, or when we haven't set up our Pusher connection information properly.) We report those as if they were events, on the fake `:connection` channel. (`:connection` is not a legal channel name.)
 
-@docs ErrorReport, ErrorEvent, errorReport
+@docs ErrorEvent, ErrorReport, errorReport
 
 -}
 
@@ -181,13 +181,26 @@ tagMap8 tag constructor a b c d e f g h =
     Decode.map tag <| Decode.map8 constructor a b c d e f g h
 
 
-{-| -}
+{-| Because there are only two kinds of error events, we don't leave them as
+the strings ":connection\_error" and "pusher:subscription\_error" but
+ConnectionError and SubscriptionError
+-}
 type ErrorEvent
     = ConnectionError
     | SubscriptionError
 
 
-{-| -}
+{-| The `ErrorReport` record attempts to report a reasonable `code` and `text` for incoming errors. For unexpected errors, where mostly you want a report for debugging purposes, reporting the `code` and `text` fields should be sufficient — but if not, the `json` field has the unencoded event.
+
+For user-facing errors, you'll probably want to construct your own error messages. Codes you'll want to consider for that are
+
+  - HTTP error status codes from your authentication server, like 401 or 403;
+  - The HTTP 413 status code, which Pusher returns both for event bodies that are too large and for exceeding your quota
+  - Pusher's WebSocket 4301 error, which happens when you exceed Pusher's rate limit for client events.
+
+Details: I've seen an error come in with neither code nor text, always (so far!) swiftly followed by another event with both. If there is no incoming error code, we use 0, just because you're so unlikely to see it in practice. If there is only an error code, with no error text, we make up a reasonable text noting the code. In any case, for `SubscriptionError`s, we add the name of the channel for which subscription failed to the text.
+
+-}
 type alias ErrorReport =
     { channel : String
     , event : ErrorEvent
@@ -197,10 +210,7 @@ type alias ErrorReport =
     }
 
 
-{-| We want to give our callers a simpler interface than Pusher gives us.
-`toError` tries to handle generalized versions of the Pusher errors I've seen,
-with a "throw up our hands and just show the user some JSON" final fallback.
-
+{-| Sometimes a connection error comes in with neither code nor text, in whi
 Here are some example errors from the overall Pusher connection:
 
   - {type: "WebSocketError", error: {isTrusted: true}}
@@ -219,10 +229,6 @@ distinct from the WebSocket codes).
 
 So: we attempt to return a meaningful error number in the `code` field, and a
 meaningful error message in the `text` field.
-
-The other option would be to return a custom type with a bunch of very similar
-variants. Seems better to simplify it here than make our callers do giant case
-statements.
 
 -}
 errorDecoder :
