@@ -2,7 +2,7 @@ module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
-    , ErrorReport, ErrorKind(..), errorReport, messageFor
+    , ErrorReport, ErrorKind(..), errorReport
     )
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
@@ -54,7 +54,7 @@ Pusher subscription errors are received as `pusher:subscription_error` events on
 
 Pusher also reports [connection errors](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#connection-closure) (when the internet conection has been interupted, for instance, or when we haven't set up our Pusher connection information properly.) We report those as if they were events, on the fake `:connection` channel. (`:connection` is not a legal channel name.)
 
-@docs ErrorReport, ErrorKind, errorReport, messageFor
+@docs ErrorReport, ErrorKind, errorReport
 
 -}
 
@@ -365,45 +365,3 @@ subscriptionError =
 errorReport : Decoder ErrorReport
 errorReport =
     Decode.oneOf [ subscriptionError, connectionError ]
-
-
-{-| -}
-messageFor : ErrorReport -> String
-messageFor report =
-    if report.text /= "" then
-        report.text
-
-    else
-        let
-            code =
-                report.code
-
-            status =
-                case report.code of
-                    0 ->
-                        ""
-
-                    n ->
-                        String.concat [ " (", String.fromInt n, ")" ]
-        in
-        case report.event of
-            SubscriptionError ->
-                String.concat [ "Subscription to ", report.channel, " failed", status ]
-
-            ConnectionError ->
-                if 1000 <= code && code < 2000 then
-                    -- A WebSocket connection error
-                    -- See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
-                    "Error connecting to the internet" ++ status
-
-                else if 4000 <= code && code < 5000 then
-                    -- A Pusher connection error
-                    -- See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#error-codes
-                    "Error connecting to Pusher" ++ status
-
-                else if 2000 <= code && code < 4000 then
-                    -- WebSocket codes reserved for extensions and libararies
-                    "Connection error" ++ status
-
-                else
-                    "Connection error" ++ status
