@@ -2,7 +2,7 @@ module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
     , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
-    , ErrorReport, ErrorKind(..), errorReport
+    , ErrorReport, ErrorEvent(..), errorReport
     )
 
 {-| An Elm interface to [Pusher Channels](https://pusher.com/channels)
@@ -54,7 +54,7 @@ Pusher subscription errors are received as `pusher:subscription_error` events on
 
 Pusher also reports [connection errors](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol#connection-closure) (when the internet conection has been interupted, for instance, or when we haven't set up our Pusher connection information properly.) We report those as if they were events, on the fake `:connection` channel. (`:connection` is not a legal channel name.)
 
-@docs ErrorReport, ErrorKind, errorReport
+@docs ErrorReport, ErrorEvent, errorReport
 
 -}
 
@@ -182,7 +182,7 @@ tagMap8 tag constructor a b c d e f g h =
 
 
 {-| -}
-type ErrorKind
+type ErrorEvent
     = ConnectionError
     | SubscriptionError
 
@@ -190,7 +190,7 @@ type ErrorKind
 {-| -}
 type alias ErrorReport =
     { channel : String
-    , event : ErrorKind
+    , event : ErrorEvent
     , code : Int
     , text : String
     , json : Decode.Value
@@ -226,7 +226,7 @@ statements.
 
 -}
 errorDecoder :
-    ErrorKind
+    ErrorEvent
     -> Decoder Int
     -> Decoder String
     -> Decoder ErrorReport
@@ -315,7 +315,7 @@ codeMessage code =
         "Connection error" ++ status
 
 
-fallback : ErrorKind -> Decoder ErrorReport
+fallback : ErrorEvent -> Decoder ErrorReport
 fallback event =
     errorDecoder event (Decode.succeed 0) (Decode.succeed "")
 
