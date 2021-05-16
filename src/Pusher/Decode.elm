@@ -58,7 +58,7 @@ Pusher also reports [connection errors](https://pusher.com/docs/channels/library
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, Error(..), andThen, int, maybe, string)
+import Json.Decode as Decode exposing (Decoder, andThen, int, maybe, string)
 
 
 {-| Abbreviation for `Decode.field "channel" Decode.string`

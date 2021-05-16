@@ -1,5 +1,6 @@
 # Folders to ignore
-/elm-stuff
+elm-stuff
+/node_modules
 
 # MacOS weird stuff
 .DS_Store
