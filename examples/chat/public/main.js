@@ -1,3 +1,4 @@
+import Elm from '../.elm-spa/defaults/Main.elm'
 import { v4 as uuidv4 } from 'uuid';
 
 let uuid;
