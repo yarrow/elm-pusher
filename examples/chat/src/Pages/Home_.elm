@@ -1,21 +1,67 @@
-module Pages.Home_ exposing (page)
+module Pages.Home_ exposing (Model, Msg, init, page, update, view)
 
+import Effect exposing (Effect)
+import Gen.Params.Home_ exposing (Params)
 import Html
-import Page exposing (Page)
-import Request exposing (Request)
+import Page
+import Request
 import Shared
 import View exposing (View)
 
 
-page : Shared.Model -> Request -> Page
+page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared _ =
-    Page.static
-        { view = view shared
+    Page.advanced
+        { init = init
+        , update = update
+        , view = view shared
+        , subscriptions = subscriptions
         }
 
 
-view : Shared.Model -> View msg
-view shared =
+
+-- INIT
+
+
+type alias Model =
+    {}
+
+
+init : ( Model, Effect Msg )
+init =
+    ( {}, Effect.none )
+
+
+
+-- UPDATE
+
+
+type Msg
+    = ReplaceMe
+
+
+update : Msg -> Model -> ( Model, Effect Msg )
+update msg model =
+    case msg of
+        ReplaceMe ->
+            ( model, Effect.none )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+
+
+
+-- VIEW
+
+
+view : Shared.Model -> Model -> View Msg
+view shared _ =
     { title = "Homepage"
     , body = [ Html.text ("Hello, " ++ shared.uuid) ]
     }
