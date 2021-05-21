@@ -5,18 +5,20 @@ import Gen.Params.Home_ exposing (Params)
 import Html
 import Page
 import Request
-import Shared
+import Shared exposing (User)
 import View exposing (View)
 
 
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared _ =
-    Page.advanced
-        { init = init
-        , update = update
-        , view = view shared
-        , subscriptions = subscriptions
-        }
+    Page.protected.advanced
+        (\user ->
+            { init = init
+            , update = update
+            , view = view user
+            , subscriptions = subscriptions
+            }
+        )
 
 
 
@@ -60,8 +62,8 @@ subscriptions model =
 -- VIEW
 
 
-view : Shared.Model -> Model -> View Msg
-view shared _ =
+view : Shared.User -> Model -> View Msg
+view user _ =
     { title = "Homepage"
-    , body = [ Html.text ("Hello, " ++ shared.uuid) ]
+    , body = [ Html.text ("Hello, " ++ user.name) ]
     }
