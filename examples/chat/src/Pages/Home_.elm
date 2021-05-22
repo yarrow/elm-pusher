@@ -2,7 +2,7 @@ module Pages.Home_ exposing (Model, Msg, init, page, update, view)
 
 import Effect exposing (Effect)
 import Gen.Params.Home_ exposing (Params)
-import Html
+import Html.Styled as Html
 import Page
 import Request
 import Shared exposing (User)

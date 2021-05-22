@@ -2,8 +2,8 @@ module Pages.SignIn exposing (Model, Msg, init, page, update, view)
 
 import Effect exposing (Effect)
 import Gen.Params.SignIn exposing (Params)
-import Html
-import Html.Events as Events
+import Html.Styled as Html
+import Html.Styled.Events as Events
 import Page
 import Request
 import Shared
@@ -25,12 +25,13 @@ page shared _ =
 
 
 type alias Model =
-    {}
+    { name : String
+    }
 
 
 init : ( Model, Effect Msg )
 init =
-    ( {}, Effect.none )
+    ( { name = "" }, Effect.none )
 
 
 
@@ -64,7 +65,7 @@ subscriptions model =
 
 
 view : Shared.Model -> Model -> View Msg
-view shared _ =
+view shared model =
     { title = "Sign In"
     , body =
         [ Html.text ("Hello, " ++ shared.uuid)
