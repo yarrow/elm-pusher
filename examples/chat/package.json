@@ -14,6 +14,7 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^6.0.2",
+    "cypress": "^7.4.0",
     "elm-spa": "^6.0.4",
     "elm-test": "^0.19.1-revision7",
     "netlify-cli": "^3.30.7",
