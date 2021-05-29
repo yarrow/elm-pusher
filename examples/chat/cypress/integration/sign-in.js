@@ -1,6 +1,6 @@
 describe('Sign-in tests', () => {
   it('Redirects to main page only after name and password are entered', () => {
-    cy.visit('http://localhost:8888/')
+    cy.visit('/')
     cy.location('pathname').should('eq', '/sign-in')
 
     cy.get('[data-cy=name]').clear()
