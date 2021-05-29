@@ -52,6 +52,7 @@ modelValidator =
     Validate.firstError
         [ Validate.ifBlank .name "Please type your name"
         , Validate.ifBlank .password "Please enter the password"
+        , Validate.ifFalse (\model -> model.password == "chumley") "Failed login"
         ]
 
 

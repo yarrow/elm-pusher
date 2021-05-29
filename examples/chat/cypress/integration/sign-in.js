@@ -16,7 +16,7 @@ describe('Sign-in tests', () => {
     cy.get('[data-cy=error]').contains(/password/i)
     cy.location('pathname').should('eq', '/sign-in')
 
-    cy.get('[data-cy=password]').type('any-damn-password')
+    cy.get('[data-cy=password]').type(Cypress.env('PASSWORD'))
     cy.get('[data-cy=sign-in]').click()
     cy.location('pathname').should('eq', '/')
     cy.contains('Yarrow')
