@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "npm install && npm run netlify",
-    "netlify": "netlify dev",
     "dev": "concurrently \"elm-spa watch\" \"vite\"",
+    "dev:netlify": "npx netlify dev",
     "build": "elm-spa gen && vite build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:cypress": "npx cypress open"
   },
   "author": "Yarrow",
   "license": "MIT",
