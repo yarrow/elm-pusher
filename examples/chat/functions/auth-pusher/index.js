@@ -1,9 +1,7 @@
 const querystring = require("querystring");
 exports.handler = async function (event, context) {
   const query = querystring.parse(event.body);
-  log("Input", query);
-  log("Event", event);
-  log("Context", context);
+//  log("Input", query); log("Event", event); log("Context", context);
   if (query.password !== process.env.PASSWORD) {
     return {
       statusCode: 401,
@@ -24,7 +22,7 @@ exports.handler = async function (event, context) {
   });
 
   const presenceData = {
-    user_id: query.socket_id,
+    user_id: query.uuid,
     user_info: { name: query.name },
   };
   const auth = pusher.authenticate(
@@ -43,7 +41,11 @@ exports.handler = async function (event, context) {
     body: JSON.stringify(auth),
   };
 };
+
+
+/*
 function log(tag, obj) {
   msg = `"${tag}:" ${JSON.stringify(obj, null, 2)}`;
   console.log(msg);
 }
+*/

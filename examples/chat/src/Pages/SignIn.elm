@@ -1,11 +1,12 @@
 module Pages.SignIn exposing (Model, Msg, init, page, update, view)
 
-import Effect exposing (Effect)
+import Effect exposing (Effect, fromCmd)
 import Gen.Params.SignIn exposing (Params)
 import Html.Styled as Html exposing (Attribute, Html, br, button, div, input, label, p, text)
 import Html.Styled.Attributes exposing (attribute, for, id, placeholder, type_, value)
 import Html.Styled.Events as Events
 import Page
+import Ports
 import Request
 import Shared
 import Validate exposing (Validator, validate)
@@ -27,15 +28,17 @@ page shared _ =
 
 
 type alias Model =
-    { name : String
+    { uuid : String
+    , name : String
     , password : String
     , error : Maybe String
     }
 
 
 init : Shared.Model -> ( Model, Effect Msg )
-init shared =
-    ( { name = Maybe.withDefault { name = "" } shared.user |> .name
+init { uuid, user } =
+    ( { uuid = uuid
+      , name = Maybe.map .name user |> Maybe.withDefault ""
       , password = ""
       , error = Nothing
       }
@@ -52,7 +55,6 @@ modelValidator =
     Validate.firstError
         [ Validate.ifBlank .name "Please type your name"
         , Validate.ifBlank .password "Please enter the password"
-        , Validate.ifFalse (\model -> model.password == "chumley") "Failed login"
         ]
 
 
@@ -93,7 +95,12 @@ update msg model =
             case trimAndValidate model of
                 Ok validatedModel ->
                     ( { validatedModel | error = Nothing }
-                    , Effect.fromShared (Shared.SignIn { name = model.name })
+                    , Ports.connect
+                        { name = validatedModel.name
+                        , password = validatedModel.password
+                        , uuid = model.uuid
+                        }
+                        |> fromCmd
                     )
 
                 Err error ->
