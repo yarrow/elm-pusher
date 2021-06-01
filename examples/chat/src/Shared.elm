@@ -6,6 +6,7 @@ module Shared exposing
     , init
     , subscriptions
     , update
+    , userName
     )
 
 import Gen.Route
@@ -37,10 +38,10 @@ type alias UserData =
 userDecoder : Decoder User
 userDecoder =
     let
-        userName =
+        name =
             inData [ "name" ] Json.string
     in
-    Json.map2 User withUid userName
+    Json.map2 User withUid name
 
 
 userData : Decoder UserData
@@ -51,7 +52,13 @@ userData =
 type alias Model =
     { uuid : String
     , user : Maybe User
+    , error : Maybe String
     }
+
+
+userName : Model -> Maybe String
+userName model =
+    Maybe.map .name model.user
 
 
 type Msg
@@ -63,7 +70,7 @@ type Msg
 
 init : Request -> Flags -> ( Model, Cmd Msg )
 init _ uuid =
-    ( { uuid = uuid, user = Nothing }, Cmd.none )
+    ( { uuid = uuid, error = Nothing, user = Nothing }, Cmd.none )
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
@@ -80,10 +87,22 @@ update req msg model =
             )
 
         GotError report ->
-            ( model, Cmd.none )
+            if report.event == SubscriptionError then
+                let
+                    complaint =
+                        if report.code == 401 then
+                            "Password did not match"
+
+                        else
+                            report.text
+                in
+                ( { model | user = Nothing, error = Just complaint }, Cmd.none )
+
+            else
+                ( { model | error = Just report.text }, Cmd.none )
 
         JsonError error ->
-            ( model, Cmd.none )
+            ( { model | error = Just (Json.errorToString error) }, Cmd.none )
 
 
 decodePusher : Json.Value -> Msg
@@ -105,4 +124,4 @@ decodePusher value =
 
 subscriptions : Request -> Model -> Sub Msg
 subscriptions _ _ =
-    Ports.members decodePusher
+    Ports.pusher decodePusher

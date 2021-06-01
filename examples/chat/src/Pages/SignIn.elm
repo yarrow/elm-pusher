@@ -17,8 +17,8 @@ page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared _ =
     Page.advanced
         { init = init shared
-        , update = update
-        , view = view
+        , update = update shared
+        , view = view shared
         , subscriptions = subscriptions
         }
 
@@ -28,19 +28,17 @@ page shared _ =
 
 
 type alias Model =
-    { uuid : String
-    , name : String
+    { name : String
     , password : String
     , error : Maybe String
     }
 
 
 init : Shared.Model -> ( Model, Effect Msg )
-init { uuid, user } =
-    ( { uuid = uuid
-      , name = Maybe.map .name user |> Maybe.withDefault ""
+init shared =
+    ( { name = Shared.userName shared |> Maybe.withDefault ""
       , password = ""
-      , error = Nothing
+      , error = shared.error
       }
     , Effect.none
     )
@@ -88,8 +86,8 @@ type Msg
     | PasswordChanged String
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
+update shared msg model =
     case msg of
         ClickedSignIn ->
             case trimAndValidate model of
@@ -98,7 +96,7 @@ update msg model =
                     , Ports.connect
                         { name = validatedModel.name
                         , password = validatedModel.password
-                        , uuid = model.uuid
+                        , uuid = shared.uuid
                         }
                         |> fromCmd
                     )
@@ -128,8 +126,16 @@ subscriptions _ =
 -- VIEW
 
 
-errorView : Maybe String -> Html msg
-errorView err =
+errorView : Maybe String -> Maybe String -> Html msg
+errorView shared local =
+    let
+        err =
+            if local == Nothing then
+                shared
+
+            else
+                local
+    in
     case err of
         Nothing ->
             div [] []
@@ -143,8 +149,8 @@ testId id =
     attribute "data-cy" id
 
 
-view : Model -> View Msg
-view model =
+view : Shared.Model -> Model -> View Msg
+view shared model =
     { title = "Sign In"
     , body =
         [ div []
@@ -169,7 +175,7 @@ view model =
                     , testId "password"
                     ]
                     []
-                , errorView model.error
+                , errorView shared.error model.error
                 ]
             ]
         , button

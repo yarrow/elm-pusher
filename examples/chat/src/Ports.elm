@@ -1,4 +1,4 @@
-port module Ports exposing (connect, members)
+port module Ports exposing (connect, pusher)
 
 import Json.Decode exposing (Value)
 
@@ -14,7 +14,7 @@ import Json.Decode exposing (Value)
 port connect : Authentication -> Cmd msg
 
 
-port members : (Value -> msg) -> Sub msg
+port pusher : (Value -> msg) -> Sub msg
 
 
 {-| A record with the name and password to send to the Pusher `authEndpoint`

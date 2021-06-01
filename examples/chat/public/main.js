@@ -26,6 +26,7 @@ app.ports.connect.subscribe((authParams) => {
   });
   channel = pusher.subscribe("presence-main");
   bind_subscription_succeeded("presence-main");
+  bind_subscription_error("presence-main");
 });
 
 // Pusher (https://pusher.com/docs/channels/using_channels/events#binding-with-optional-this-context)
@@ -50,8 +51,21 @@ function bind_subscription_succeeded(channelName) {
       members: memberList,
     };
     log("subscription succeeded", result);
-    app.ports.members.send(result);
+    app.ports.pusher.send(result);
   });
+}
+
+function bind_subscription_error(channelName) {
+channel = pusher.channel(channelName);
+channel.bind("pusher:subscription_error", (err) => {
+    const result = {
+    channel: channelName,
+    event: "pusher:subscription_error",
+    data: err,
+    };
+    log("subscription error", result);
+    app.ports.pusher.send(result);
+});
 }
 
 function log(tag, obj) {
