@@ -4,7 +4,6 @@ module DecodeTests exposing
     , fieldDecoders
     , filters
     , memberOperations
-    , tagMapTests
     )
 
 import Expect
@@ -37,26 +36,11 @@ fieldDecoders =
                         D.succeed Data |> required "name" D.string
                 in
                 D.decodeValue decoder encoded |> Expect.equal (Ok expected)
-        , test "tagMapN works like Decode.mapN but adds the given variant tag" <|
-            \_ ->
-                let
-                    decoder =
-                        tagMap4 Full
-                            ChannelEventUidData
-                            withChannel
-                            withEvent
-                            withUid
-                            (withData dataDecoder)
-
-                    dataDecoder =
-                        D.succeed Data |> required "name" D.string
-                in
-                D.decodeValue decoder encoded |> Expect.equal (Ok (Full expected))
         , test "The inData decoder reaches into the incoming data field" <|
             \_ ->
                 let
                     decoder =
-                        tagMap2 WithName Member withUid (inData [ "name" ] D.string)
+                        D.map WithName (D.map2 Member withUid (inData [ "name" ] D.string))
                 in
                 D.decodeValue decoder encoded |> Expect.equal (Ok (WithName expectedMember))
         , test "The inData decoder can reach deep into the incoming data field" <|
@@ -139,7 +123,7 @@ filters =
             \_ ->
                 let
                     decoder =
-                        tagMap2 Some UidData withUid (withData dataDecoder)
+                        D.map Some (D.map2 UidData withUid (withData dataDecoder))
                             |> channelIs "ABC"
                             |> eventIs "Halloween"
                             |> uidIs "a.b"
@@ -151,7 +135,7 @@ filters =
         , describe "when an xIs filter doesn't match the incoming field, the result is an Error" <|
             let
                 decoder =
-                    tagMap2 Some UidData withUid (withData dataDecoder)
+                    D.map Some (D.map2 UidData withUid (withData dataDecoder))
 
                 dataDecoder =
                     D.succeed Data |> required "name" D.string
@@ -171,16 +155,18 @@ filters =
                 let
                     decoder =
                         D.oneOf
-                            [ tagMap4 Full
-                                ChannelEventUidData
-                                withChannel
-                                withEvent
-                                withUid
-                                (withData dataDecoder)
+                            [ D.map Full
+                                (D.map4
+                                    ChannelEventUidData
+                                    withChannel
+                                    withEvent
+                                    withUid
+                                    (withData dataDecoder)
+                                )
                                 |> channelIs "CBS"
-                            , tagMap2 Some UidData withUid (withData dataDecoder)
+                            , D.map Some (D.map2 UidData withUid (withData dataDecoder))
                                 |> eventIs "Halloween"
-                            , tagMap WTF identity withEvent |> channelIs "ABC"
+                            , D.map WTF (D.map identity withEvent) |> channelIs "ABC"
                             ]
 
                     dataDecoder =
@@ -208,7 +194,7 @@ type alias Doghouse =
 
 dogHouse : Decoder PetLair
 dogHouse =
-    tagMap2 Dog Doghouse (inData [ "color" ] D.string) (inData [ "volume" ] D.int) |> eventIs "Dog"
+    D.map Dog (D.map2 Doghouse (inData [ "color" ] D.string) (inData [ "volume" ] D.int)) |> eventIs "Dog"
 
 
 type alias CatTree =
@@ -219,7 +205,7 @@ type alias CatTree =
 
 catTree : Decoder PetLair
 catTree =
-    tagMap2 Cat CatTree (inData [ "color" ] D.string) (inData [ "height" ] D.int) |> eventIs "Cat"
+    D.map Cat (D.map2 CatTree (inData [ "color" ] D.string) (inData [ "height" ] D.int) |> eventIs "Cat")
 
 
 type alias SpiderWeb =
@@ -230,7 +216,7 @@ type alias SpiderWeb =
 
 spiderWeb : Decoder PetLair
 spiderWeb =
-    tagMap2 Spider SpiderWeb (inData [ "strength" ] D.int) (inData [ "strands" ] D.int) |> eventIs "Spider"
+    D.map Spider (D.map2 SpiderWeb (inData [ "strength" ] D.int) (inData [ "strands" ] D.int) |> eventIs "Spider")
 
 
 extendedFilterExample : Test
@@ -299,11 +285,7 @@ memberOperations =
             \_ ->
                 let
                     decoder =
-                        tagMap2
-                            MemberAddedOnChannel
-                            MemberOnChannel
-                            withChannel
-                            getMember
+                        D.map MemberAddedOnChannel (D.map2 MemberOnChannel withChannel getMember)
                             |> isAdded
 
                     expectedChannelMember =
@@ -324,10 +306,7 @@ memberOperations =
             \_ ->
                 let
                     decoder =
-                        tagMap2 Subscribers
-                            MemberData
-                            (withMe getMember)
-                            (withMembers getMember)
+                        D.map Subscribers (D.map2 MemberData (withMe getMember) (withMembers getMember))
 
                     theMembers =
                         { me = expectedMember
@@ -375,157 +354,6 @@ type Mbr
     | MemberRemoved Member
     | Subscribers MemberData
     | MemberAddedOnChannel MemberOnChannel
-
-
-
--- Tests for tagMap, tagMap2, ... tagMap8
-
-
-type alias Record1 =
-    { f1 : Int }
-
-
-type alias Record2 =
-    { f1 : Int, f2 : Int }
-
-
-type alias Record3 =
-    { f1 : Int, f2 : Int, f3 : Int }
-
-
-type alias Record4 =
-    { f1 : Int, f2 : Int, f3 : Int, f4 : Int }
-
-
-type alias Record5 =
-    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int }
-
-
-type alias Record6 =
-    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int }
-
-
-type alias Record7 =
-    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int, f7 : Int }
-
-
-type alias Record8 =
-    { f1 : Int, f2 : Int, f3 : Int, f4 : Int, f5 : Int, f6 : Int, f7 : Int, f8 : Int }
-
-
-type BoilerPlate
-    = Variant1 Record1
-    | Variant2 Record2
-    | Variant3 Record3
-    | Variant4 Record4
-    | Variant5 Record5
-    | Variant6 Record6
-    | Variant7 Record7
-    | Variant8 Record8
-
-
-f n =
-    -- field name n
-    "f" ++ String.fromInt n
-
-
-d n =
-    -- decode an integer from field data.fn
-    inData [ f n ] D.int
-
-
-e n =
-    -- encode an integer as field fn
-    ( f n, E.int n )
-
-
-enc1 =
-    E.object [ ( "data", E.object [ e 1 ] ) ]
-
-
-enc2 =
-    E.object [ ( "data", E.object [ e 1, e 2 ] ) ]
-
-
-enc3 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3 ] ) ]
-
-
-enc4 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4 ] ) ]
-
-
-enc5 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5 ] ) ]
-
-
-enc6 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6 ] ) ]
-
-
-enc7 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6, e 7 ] ) ]
-
-
-enc8 =
-    E.object [ ( "data", E.object [ e 1, e 2, e 3, e 4, e 5, e 6, e 7, e 8 ] ) ]
-
-
-tagMapTests : Test
-tagMapTests =
-    describe "tagMapN tests" <|
-        let
-            decodes encodedValue decoder =
-                D.decodeValue decoder encodedValue
-
-            to =
-                Expect.equal
-        in
-        [ test "tagMapUnabbreviated" <|
-            \_ ->
-                D.decodeValue (tagMap Variant1 Record1 (d 1)) enc1
-                    |> Expect.equal (Ok (Variant1 (Record1 1)))
-        , test "tagMap" <|
-            \_ ->
-                tagMap Variant1 Record1 (d 1)
-                    |> decodes enc1
-                    |> to (Ok (Variant1 (Record1 1)))
-        , test "tagMap2" <|
-            \_ ->
-                tagMap2 Variant2 Record2 (d 1) (d 2)
-                    |> decodes enc2
-                    |> to (Ok (Variant2 (Record2 1 2)))
-        , test "tagMap3" <|
-            \_ ->
-                tagMap3 Variant3 Record3 (d 1) (d 2) (d 3)
-                    |> decodes enc3
-                    |> to (Ok (Variant3 (Record3 1 2 3)))
-        , test "tagMap4" <|
-            \_ ->
-                tagMap4 Variant4 Record4 (d 1) (d 2) (d 3) (d 4)
-                    |> decodes enc4
-                    |> to (Ok (Variant4 (Record4 1 2 3 4)))
-        , test "tagMap5" <|
-            \_ ->
-                tagMap5 Variant5 Record5 (d 1) (d 2) (d 3) (d 4) (d 5)
-                    |> decodes enc5
-                    |> to (Ok (Variant5 (Record5 1 2 3 4 5)))
-        , test "tagMap6" <|
-            \_ ->
-                tagMap6 Variant6 Record6 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6)
-                    |> decodes enc6
-                    |> to (Ok (Variant6 (Record6 1 2 3 4 5 6)))
-        , test "tagMap7" <|
-            \_ ->
-                tagMap7 Variant7 Record7 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6) (d 7)
-                    |> decodes enc7
-                    |> to (Ok (Variant7 (Record7 1 2 3 4 5 6 7)))
-        , test "tagMap8" <|
-            \_ ->
-                tagMap8 Variant8 Record8 (d 1) (d 2) (d 3) (d 4) (d 5) (d 6) (d 7) (d 8)
-                    |> decodes enc8
-                    |> to (Ok (Variant8 (Record8 1 2 3 4 5 6 7 8)))
-        ]
 
 
 errorReportTests : Test

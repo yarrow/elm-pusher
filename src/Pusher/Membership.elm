@@ -67,7 +67,7 @@ isAdded =
 If you've defined a `memberDecoder` for use in `withMe` and `withMembers`, you can use it as is in your decoder:
 
     Decode.oneOf
-        [ tagMap2 Subscribers MemberData (withMe memberDecoder) (withMembers memberDecoder)
+        [ Decode.map Subscribers (Decode.map2 MemberData (withMe memberDecoder) (withMembers memberDecoder))
         , Decode.map MemberAdded memberDecoder |> isAdded
         , Decode.map MemberRemoved memberDecoder |> isRemoved
         ]
@@ -81,7 +81,8 @@ If you need the channel as well as the member information, you need to do a bit 
 
 then for member added, use
 
-    tagMap2 MemberAdded MemberOnChannel withChannel memberDecoder |> isAdded
+    memberOnChannel = Decode.map2 MemberOnChannel withChannel memberDecoder
+    Decode.map MemberAdded memberOnChannel |> isAdded
 
 -}
 isRemoved : Decoder a -> Decoder a

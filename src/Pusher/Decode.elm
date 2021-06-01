@@ -1,7 +1,6 @@
 module Pusher.Decode exposing
     ( withChannel, withEvent, withUid, withData, inData
     , channelIs, eventIs, uidIs
-    , tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
     , ErrorEvent(..), ErrorReport, errorReport
     )
 
@@ -39,13 +38,6 @@ The `channel` and `event` fields are strings, so you could use them, for instanc
             ]
 
 @docs channelIs, eventIs, uidIs
-
-
-# Tag Maps
-
-**FIXME: DOCUMENT ME!**
-
-@docs tagMap, tagMap2, tagMap3, tagMap4, tagMap5, tagMap6, tagMap7, tagMap8
 
 
 # Error Reports
@@ -131,54 +123,6 @@ is field valueNeeded decoder =
                 Decode.fail valueNeeded
     in
     Decode.field field string |> Decode.andThen fieldIs
-
-
-{-| -}
-tagMap : (value -> msg) -> (a -> value) -> Decoder a -> Decoder msg
-tagMap tag constructor a =
-    Decode.map tag <| Decode.map constructor a
-
-
-{-| -}
-tagMap2 : (value -> msg) -> (a -> b -> value) -> Decoder a -> Decoder b -> Decoder msg
-tagMap2 tag constructor a b =
-    Decode.map tag <| Decode.map2 constructor a b
-
-
-{-| -}
-tagMap3 : (value -> msg) -> (a -> b -> c -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder msg
-tagMap3 tag constructor a b c =
-    Decode.map tag <| Decode.map3 constructor a b c
-
-
-{-| -}
-tagMap4 : (value -> msg) -> (a -> b -> c -> d -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder msg
-tagMap4 tag constructor a b c d =
-    Decode.map tag <| Decode.map4 constructor a b c d
-
-
-{-| -}
-tagMap5 : (value -> msg) -> (a -> b -> c -> d -> e -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder msg
-tagMap5 tag constructor a b c d e =
-    Decode.map tag <| Decode.map5 constructor a b c d e
-
-
-{-| -}
-tagMap6 : (value -> msg) -> (a -> b -> c -> d -> e -> f -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder msg
-tagMap6 tag constructor a b c d e f =
-    Decode.map tag <| Decode.map6 constructor a b c d e f
-
-
-{-| -}
-tagMap7 : (value -> msg) -> (a -> b -> c -> d -> e -> f -> g -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g -> Decoder msg
-tagMap7 tag constructor a b c d e f g =
-    Decode.map tag <| Decode.map7 constructor a b c d e f g
-
-
-{-| -}
-tagMap8 : (value -> msg) -> (a -> b -> c -> d -> e -> f -> g -> h -> value) -> Decoder a -> Decoder b -> Decoder c -> Decoder d -> Decoder e -> Decoder f -> Decoder g -> Decoder h -> Decoder msg
-tagMap8 tag constructor a b c d e f g h =
-    Decode.map tag <| Decode.map8 constructor a b c d e f g h
 
 
 {-| Because there are only two kinds of error events, we don't leave them as
