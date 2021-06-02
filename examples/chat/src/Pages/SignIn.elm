@@ -9,6 +9,7 @@ import Page
 import Ports
 import Request
 import Shared
+import String.Extra exposing (toTitleCase)
 import Validate exposing (Validator, validate)
 import View exposing (View)
 
@@ -61,7 +62,7 @@ trimAndValidate model =
     let
         trimmedModel =
             { model
-                | name = String.trim model.name
+                | name = toTitleCase (String.trim model.name)
                 , password = String.trim model.password
             }
 

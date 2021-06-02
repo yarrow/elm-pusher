@@ -9,7 +9,8 @@ describe('Sign-in tests', () => {
     cy.get('[data-cy=error]').contains(/name/i)
     cy.location('pathname').should('eq', '/sign-in')
 
-    cy.get('[data-cy=name]').type('     Yarrow        ') // Will be trimmed to 'Yarrow'
+    // Will be trimmed and capitalized, to 'Yar Row'
+    cy.get('[data-cy=name]').type('     Yar row        ')
     cy.get('[data-cy=password]').clear()
 
     // Non-blank password is required
@@ -28,6 +29,6 @@ describe('Sign-in tests', () => {
     cy.get('[data-cy=password]').type(Cypress.env('PASSWORD'))
     cy.get('[data-cy=sign-in]').click()
     cy.location('pathname').should('eq', '/')
-    cy.contains('Yarrow')
+    cy.contains('Yar Row')
   })
 })
