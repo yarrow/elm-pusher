@@ -12,11 +12,11 @@ import View exposing (View)
 page : Shared.Model -> Request.With Params -> Page.With Model Msg
 page shared _ =
     Page.protected.advanced
-        (\user ->
+        (\_ ->
             { init = init
             , update = update
-            , view = view user
-            , subscriptions = subscriptions
+            , view = view shared
+            , subscriptions = \_ -> Sub.none
             }
         )
 
@@ -50,20 +50,11 @@ update msg model =
 
 
 
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
-
-
-
 -- VIEW
 
 
-view : Shared.User -> Model -> View Msg
-view user _ =
-    { title = "Homepage"
-    , body = [ Html.text ("Hello, " ++ user.name) ]
+view : Shared.Model -> Model -> View Msg
+view shared _ =
+    { title = "Gather"
+    , body = [ Html.text ("Present: " ++ shared.memberList) ]
     }

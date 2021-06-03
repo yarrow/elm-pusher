@@ -9,6 +9,7 @@ module Shared exposing
     , userName
     )
 
+import Dict exposing (Dict)
 import Gen.Route
 import Json.Decode as Json exposing (Decoder)
 import Ports
@@ -52,6 +53,8 @@ userData =
 type alias Model =
     { uuid : String
     , user : Maybe User
+    , members : Dict String User
+    , memberList : String
     , error : Maybe String
     }
 
@@ -63,6 +66,7 @@ userName model =
 
 type Msg
     = GotUsers UserData
+    | MemberAdded User
     | GotError ErrorReport
     | JsonError Json.Error
     | SignOut
@@ -70,7 +74,7 @@ type Msg
 
 init : Request -> Flags -> ( Model, Cmd Msg )
 init _ uuid =
-    ( { uuid = uuid, error = Nothing, user = Nothing }, Cmd.none )
+    ( { uuid = uuid, error = Nothing, user = Nothing, members = Dict.empty, memberList = "" }, Cmd.none )
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
@@ -82,8 +86,29 @@ update req msg model =
             )
 
         GotUsers users ->
-            ( { model | user = Just users.me }
+            let
+                keyedMember m =
+                    ( m.uid, m )
+
+                memberDict mlist =
+                    Dict.fromList (List.map keyedMember mlist)
+
+                user =
+                    Just users.me
+
+                members =
+                    memberDict users.members
+
+                memberList =
+                    List.sort (List.map .name (Dict.values members)) |> String.join ", "
+            in
+            ( { model | user = user, members = members, memberList = memberList }
             , Request.pushRoute Gen.Route.Home_ req
+            )
+
+        MemberAdded member ->
+            ( { model | members = Dict.insert member.uid member model.members }
+            , Cmd.none
             )
 
         GotError report ->
@@ -112,6 +137,7 @@ decodePusher value =
             Json.oneOf
                 [ Json.map GotUsers userData
                 , Json.map GotError errorReport
+                , Json.map MemberAdded userDecoder
                 ]
     in
     case Json.decodeValue decode value of

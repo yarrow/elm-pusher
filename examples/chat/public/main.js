@@ -68,6 +68,20 @@ channel.bind("pusher:subscription_error", (err) => {
 });
 }
 
+function bind_member_added(channelName) {
+  channel = pusher.channel(channelName);
+  channel.bind("pusher:member_added", (member) => {
+    const result = {
+      channel: channelName,
+      event: "pusher:member_added",
+      uid: member.id,
+      data: member.info
+    };
+    log("member added", result);
+    app.ports.pusher.send(result);
+  });
+}
+
 function log(tag, obj) {
   const msg = `"${tag}" ${JSON.stringify(obj, null, 2)}`;
   console.log(msg);
